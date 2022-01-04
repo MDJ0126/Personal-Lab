@@ -1,2 +1,2 @@
 UserName : MDJ0126
-Passward : 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 (사용되는 토큰키 올리면 안됨, Github에서 막음..)
+Passward : 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 (예제입니다. GitHub->Setting->Developer settings->Personal access tokens에서 생성)
