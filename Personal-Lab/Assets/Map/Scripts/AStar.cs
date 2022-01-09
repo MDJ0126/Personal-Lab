@@ -47,10 +47,6 @@ namespace Map.PathFinding
                     {
                         // 부모 세팅
                         aroundBlocks = aroundBlocks.FindAll(block => !block.check);
-                        for (int i = 0; i < aroundBlocks.Count; i++)
-                        {
-                            aroundBlocks[i].prev = current;
-                        }
                     }
 
                     // 주변 블럭 가격 계산
@@ -137,10 +133,9 @@ namespace Map.PathFinding
                     {
                         minValueBlock = next;
                     }
-                    else if (minValueBlock.H > next.H && current.G < next.G)
+                    else if (minValueBlock.H > next.H)
                     {
-                        //if (minValueBlock.G > next.G)
-                            minValueBlock = next;
+                        minValueBlock = next;
                     }
                 }
             }
@@ -163,6 +158,8 @@ namespace Map.PathFinding
                     var block = arounds[i];
                     bool isDiagonalBlock = Math.Abs(block.x - current.x) == 1 && Math.Abs(block.y - current.y) == 1;
                     int priceFromDest = (Math.Abs(dest.x - block.x) + Math.Abs(dest.y - block.y)) * 10;
+                    if (block.prev == null)
+                        block.prev = current;
                     block.SetPrice(current.G + (isDiagonalBlock ? 14 : 10), priceFromDest);
                 }
             }
