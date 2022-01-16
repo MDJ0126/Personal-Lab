@@ -1,37 +1,55 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace ConsoleApp
 {
     class Program
     {
-        static List<string> list = new List<string>();
-        private static void Main(string[] args)
+        static void Main(string[] args)
         {
-            for (int i = 0; i < 500; i++)
-            {
-                list.Add(i.ToString());
-            }
-            Benchmark.Start(StringJoin);
-            Benchmark.Start(StringBuilder);
+            Benchmark.Start(LoopTest1);
+            Benchmark.Start(LoopTest2);
+            Benchmark.Start(OutOfRangeException);
+            Benchmark.Start(LoopTest3);
+            Benchmark.Start(LoopTest4);
             Console.WriteLine(Benchmark.GetRecord());
         }
 
-        private static string StringJoin()
+        static void OutOfRangeException()
         {
-            return string.Join(" ", list);
+            int[] a = new int[1];
+            a[2] = 20;
         }
 
-        private static string StringBuilder()
+        static void LoopTest1()
         {
-            StringBuilder builder = new StringBuilder();
-            for (int i = 0; i < list.Count; i++)
+            for (int i = 0; i < 1999; i++)
             {
-                builder.Append(list[i]);
-                builder.Append(" ");
+
             }
-            return builder.ToString();
+        }
+
+        static void LoopTest2()
+        {
+            for (int i = 0; i < 9999; i++)
+            {
+
+            }
+        }
+
+        static void LoopTest3()
+        {
+            for (int i = 0; i < 999; i++)
+            {
+
+            }
+        }
+
+        static void LoopTest4()
+        {
+            for (int i = 0; i < 9999; i++)
+            {
+
+            }
         }
     }
 }

@@ -9,21 +9,55 @@ public class Benchmark
     private class ExecuteRecord
     {
         public static int methodLength = 15;
-        public static int resultLength = 15;
+        public static int secondsLength = 15;
         public static int rankLength = 5;
+        public static int memoryLength = 10;
 
         public string methodName;
-        public double seconds;
-        public string result;
+        public double ticks;
         public short rank;
+        public long memory;
+        public string message;
 
-        public bool IsError => seconds <= 0f;
+        public bool IsError => !string.IsNullOrEmpty(message);
+
+        public string GetSeconds()
+        {
+            return $"{1000 * 1000 * 1000 * ticks / Stopwatch.Frequency:F3} ns";
+        }
+
+        public string GetMemory()
+        {
+            int mok = 0;
+            long tempMem = memory < 8192 ? 8192 : memory;
+            while (tempMem > 1024)
+            {
+                tempMem /= 1024;
+                mok++;
+            }
+            switch (mok)
+            {
+                case 0:
+                    return $"{tempMem} B";
+                case 1:
+                    return $"{tempMem} KB";
+                case 2:
+                    return $"{tempMem} MB";
+                case 3:
+                    return $"{tempMem} GB";
+                case 4:
+                    return $"{tempMem} TB";
+                default:
+                    return $"{memory} B";
+            }
+        }
 
         public static void Clear()
         {
             methodLength = 15;
-            resultLength = 15;
-            rankLength = 5;
+            secondsLength = 15;
+            rankLength   = 5;
+            memoryLength = 10;
         }
     }
 
@@ -59,13 +93,18 @@ public class Benchmark
 
         // Title
         sb.Append("\n[Benchmark Record]\n\n");
-        sb.Append("Method".PadLeft(ExecuteRecord.methodLength)).Append(" |").Append("Result".PadLeft(ExecuteRecord.resultLength)).Append(" |").Append("Rank".PadLeft(ExecuteRecord.rankLength)).Append(" |").Append('\n');
+        sb.Append("Method".PadLeft(ExecuteRecord.methodLength)).Append(" |").Append("Run-time".PadLeft(ExecuteRecord.secondsLength)).Append(" |").Append("Memory".PadLeft(ExecuteRecord.memoryLength)).Append(" |").Append("Rank".PadLeft(ExecuteRecord.rankLength)).Append(" |").Append('\n');
         for (int i = 0; i < ExecuteRecord.methodLength; i++)
         {
             sb.Append('=');
         }
         sb.Append(" |");
-        for (int i = 0; i < ExecuteRecord.resultLength; i++)
+        for (int i = 0; i < ExecuteRecord.secondsLength; i++)
+        {
+            sb.Append('=');
+        }
+        sb.Append(":|");
+        for (int i = 0; i < ExecuteRecord.memoryLength; i++)
         {
             sb.Append('=');
         }
@@ -83,7 +122,7 @@ public class Benchmark
             _executeRecords[i].rank = 1;
             for (int j = 0; j < _executeRecords.Count; j++)
             {
-                if (_executeRecords[i].seconds > _executeRecords[j].seconds)
+                if (_executeRecords[i].ticks > _executeRecords[j].ticks)
                     _executeRecords[i].rank++;
             }
         }
@@ -105,11 +144,11 @@ public class Benchmark
         {
             if (_executeRecords[i].IsError)
             {
-                sb.Append(_executeRecords[i].methodName.PadLeft(ExecuteRecord.methodLength)).Append(" |").Append(_executeRecords[i].result.PadLeft(ExecuteRecord.resultLength)).Append(" |").Append(" ".PadLeft(ExecuteRecord.rankLength)).Append(" |");
+                sb.Append(_executeRecords[i].methodName.PadLeft(ExecuteRecord.methodLength)).Append(" |").Append(_executeRecords[i].message);
             }
             else
             {
-                sb.Append(_executeRecords[i].methodName.PadLeft(ExecuteRecord.methodLength)).Append(" |").Append(_executeRecords[i].result.PadLeft(ExecuteRecord.resultLength)).Append(" |").Append(_executeRecords[i].rank.ToString().PadLeft(ExecuteRecord.rankLength)).Append(" |");
+                sb.Append(_executeRecords[i].methodName.PadLeft(ExecuteRecord.methodLength)).Append(" |").Append(_executeRecords[i].GetSeconds().PadLeft(ExecuteRecord.secondsLength)).Append(" |").Append($"{_executeRecords[i].GetMemory()}".PadLeft(ExecuteRecord.memoryLength)).Append(" |").Append(_executeRecords[i].rank.ToString().PadLeft(ExecuteRecord.rankLength)).Append(" |");
                 if (_executeRecords[i].rank == 1)
                     sb.Append(" << Best!");
             }
@@ -154,13 +193,13 @@ public class Benchmark
     private static string _start(string methodName, Action method, int testCnt = 100000)
     {
         // Ready
-        string result = string.Empty;
-        double seconds = 0;
+        string message = string.Empty;
         bool isSuccess = true;
 
         // Start
 
         // 1. 함수 반복 실행으로 속도가 안정화될 때까지 반복
+        double currentSeconds = 0;
         for (int i = 0; i < MAX_LOOP_PROCCESS_COUNT; i++)
         {
             _stopwatch.Restart();
@@ -170,49 +209,54 @@ public class Benchmark
             }
             catch (Exception e)
             {
-                result = "[Error] " + e.Message;
+                message = "[Error] " + e.Message;
                 isSuccess = false;
                 break;
             }
             _stopwatch.Stop();
 
-            double prevSeconds = seconds;
-            seconds = 1000 * 1000 * 1000 * _stopwatch.ElapsedTicks / Stopwatch.Frequency;
+            double prevSeconds = currentSeconds;
+            currentSeconds = _stopwatch.ElapsedTicks;
 
             // 오차 범위가 좁혀졌을때 반복 중지
-            if (Math.Abs(prevSeconds - seconds) < 1000)
+            if (Math.Abs(prevSeconds - currentSeconds) < 10)
                 break;
         }
 
         // 2. 함수 반복 실행으로 평균값 산정
+        double ticks = 0f;
+        long memory = 0;
         if (isSuccess)
         {
-            seconds = 0f;
             for (int i = 0; i < testCnt; i++)
             {
                 _stopwatch.Restart();
                 method.Invoke();
                 _stopwatch.Stop();
-                seconds += 1000 * 1000 * 1000 * _stopwatch.ElapsedTicks / Stopwatch.Frequency;
+                ticks += _stopwatch.ElapsedTicks;
             }
-            result = (seconds / testCnt).ToString() + " ns.";
+
+            ticks = ticks / testCnt;
+
+            GC.Collect();
+            long beforeMem = GC.GetTotalMemory(false);
+            method.Invoke();
+            long afterMem = GC.GetTotalMemory(false);
+            memory = afterMem - beforeMem;
         }
 
         // Caching Result Row
-        _addRecord(methodName, seconds, result);
+        _addRecord(methodName, ticks, memory, message);
 
-        return result;
+        return message;
     }
 
-    private static void _addRecord(string methodName, double seconds, string result = "")
+    private static void _addRecord(string methodName, double ticks, long memory, string message = "")
     {
         if (ExecuteRecord.methodLength < methodName.Length)
             ExecuteRecord.methodLength = methodName.Length + 5;
 
-        if (ExecuteRecord.resultLength < result.Length)
-            ExecuteRecord.resultLength = result.Length + 5;
-
-        _executeRecords.Add(new ExecuteRecord { methodName = methodName, seconds = seconds, result = result });
+        _executeRecords.Add(new ExecuteRecord { methodName = methodName, ticks = ticks, memory = memory, message = message });
     }
 
     #endregion
