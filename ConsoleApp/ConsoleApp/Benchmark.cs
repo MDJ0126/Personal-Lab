@@ -73,15 +73,15 @@ public class Benchmark
         return _start(method.Method.Name, method);
     }
 
-    /// <summary>
-    /// 밴치마크 시작 및 기록
-    /// </summary>
-    /// <param name="method"></param>
-    /// <returns></returns>
-    public static string Start(Method method)
-    {
-        return _start(method.Method.Name, () => method());
-    }
+    ///// <summary>
+    ///// 밴치마크 시작 및 기록 (.Net Core 3.1에서는 주석 풀어도 이상 없음)
+    ///// </summary>
+    ///// <param name="method"></param>
+    ///// <returns></returns>
+    //public static string Start(Method method)
+    //{
+    //    return _start(method.Method.Name, () => method());
+    //}
 
     /// <summary>
     /// 메소드 실행 기록 가져오기
@@ -159,7 +159,8 @@ public class Benchmark
         sb.Append("\n * Legends * " +
             "\n - Method: Method name." +
             "\n - Result: Executed result content." +
-            "\n - Rank: Rank from all method. ");
+            "\n - Rank: Rank from all method. " +
+            "\n");
 
         // Return Record
         return sb.ToString();
