@@ -1,25 +1,31 @@
 ﻿using System;
-
-namespace ConsoleApp
+using System.Collections.Generic;
+class Program
 {
-    class Program
+    private static List<string> records = new List<string>();
+    static void Main(string[] args)
     {
-        static void Main(string[] args)
+        // 구독 (이벤트 발생마다 텍스트 기록)
+        NotificationCenter.Subscribes += text => records.Add(text);
+
+        // 캐릭터 생성
+        Player player = new Player();
+        Monster monster = new Monster();
+
+        // 대결 시작
+        while (!player.IsDead() && !monster.IsDead())
         {
-            var option = Option.Builder.Create()
-                                .SetPlayBGM(true)
-                                .SetEffectBGM(true)
-                                .SetPush(true)
-                                .Build();
+            if (!player.IsDead())
+                player.Attack(monster);
 
-            Console.WriteLine($"IsPlayBGM: {option.IsPlayBGM}");
-            Console.WriteLine($"IsEffectBGM: {option.IsEffectBGM}");
-            Console.WriteLine($"IsPush: {option.IsPush}");
+            if (!monster.IsDead())
+                monster.Attack(player);
+        }
 
-            // result:
-            //IsPlayBGM: True
-            //IsEffectBGM: True
-            //IsPush: True
+        // 대결 결과
+        for (int i = 0; i < records.Count; i++)
+        {
+            Console.WriteLine(records[i]);
         }
     }
 }
