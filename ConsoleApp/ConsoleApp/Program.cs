@@ -1,31 +1,34 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Threading;
+
 class Program
 {
-    private static List<string> records = new List<string>();
-    static void Main(string[] args)
+    private static void Main(string[] args)
     {
-        // 구독 (이벤트 발생마다 텍스트 기록)
-        NotificationCenter.Subscribes += text => records.Add(text);
-
-        // 캐릭터 생성
-        Player player = new Player();
-        Monster monster = new Monster();
-
-        // 대결 시작
-        while (!player.IsDead() && !monster.IsDead())
+        TestClass testClass = new TestClass();
+        for (int i = 0; i < 20; i++)
         {
-            if (!player.IsDead())
-                player.Attack(monster);
-
-            if (!monster.IsDead())
-                monster.Attack(player);
+            Thread thread = new Thread(testClass.Calculte);
+            thread.Name = $"Thread ({i})";
+            thread.Start();
         }
+    }
 
-        // 대결 결과
-        for (int i = 0; i < records.Count; i++)
+    private class TestClass
+    {
+        //초기 실행 가능한 쓰레드 2개
+        //최대 실행 가능한 쓰레드 2개
+        Semaphore semaphore = new Semaphore(2, 2);
+
+        public void Calculte()
         {
-            Console.WriteLine(records[i]);
+            // 뮤텍스 취득할 때까지 기다린다.
+            semaphore.WaitOne();
+
+            // 1초간 대기 (연산이 처리되는 부분이라 가정)
+            Thread.Sleep(5000);
+
+            // 뮤텍스 해제
+            semaphore.Release();
         }
     }
 }
