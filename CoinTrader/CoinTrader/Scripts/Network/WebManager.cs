@@ -3,11 +3,14 @@ using System;
 using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
 using System.Text;
+using System.Threading;
 
 namespace Network
 {
     public class WebManager : Singleton<WebManager>
     {
+        private Semaphore semaphore = new Semaphore(0, 10);
+
         public static readonly string BASE_URL = "https://api.upbit.com/v1/";
 
         private List<ProtocolHandler> handlers = new List<ProtocolHandler>();
@@ -33,12 +36,18 @@ namespace Network
         /// <param name="onResponse"></param>
         private async void Request(RestRequest request, Action<RestResponse> onResponse)
         {
+            // 뮤텍스 취득할 때까지 대기
+            semaphore.WaitOne();
+
             // Request
             request.AddHeader("Authorization", GetAuthToken());
             RestResponse response = await restClient.ExecuteAsync(request);
             
             // Response
             onResponse?.Invoke(response);
+
+            // 뮤텍스 해제
+            semaphore.Release();
         }
 
         /// <summary>
@@ -65,6 +74,11 @@ namespace Network
             return protocolHandler;
         }
 
+        /// <summary>
+        /// Authorization
+        /// </summary>
+        /// <param name="parameter"></param>
+        /// <returns></returns>
         private string GetAuthToken(string parameter = "")
         {
             var payload = new JwtPayload

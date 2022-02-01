@@ -108,6 +108,7 @@
     <Compile Include="Scripts\Network\ProtocolHandler.cs" />
     <Compile Include="Scripts\Network\WebManager.cs" />
     <Compile Include="Scripts\Utility\Logger.cs" />
+    <Compile Include="Scripts\Utility\MultiThread.cs" />
     <Compile Include="Scripts\Utility\Singleton.cs" />
     <Compile Include="Scripts\Utility\Utils.cs" />
     <EmbeddedResource Include="Properties\Resources.resx">
