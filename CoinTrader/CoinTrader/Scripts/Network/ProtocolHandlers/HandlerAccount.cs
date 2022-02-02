@@ -1,6 +1,7 @@
 ﻿using Newtonsoft.Json.Linq;
 using RestSharp;
 using System;
+using System.Collections.Generic;
 using System.Reflection;
 
 namespace Network
@@ -8,7 +9,7 @@ namespace Network
     /// <summary>
     /// 전체 계좌 조회
     /// </summary>
-    public class AccountRes : iRsponse
+    public class AccountRes : iResponse
     {
         /// <summary>
         /// 화폐를 의미하는 영문 대문자 코드
@@ -17,15 +18,15 @@ namespace Network
         /// <summary>
         /// 주문가능 금액/수량
         /// </summary>
-        public int balance;
+        public float balance;
         /// <summary>
         /// 주문 중 묶여있는 금액/수량
         /// </summary>
-        public int locked;
+        public float locked;
         /// <summary>
         /// 매수평균가
         /// </summary>
-        public int avg_buy_price;
+        public float avg_buy_price;
         /// <summary>
         /// 매수평균가 수정 여부
         /// </summary>
@@ -55,7 +56,7 @@ namespace Network
         {
             if (res.IsSuccessful)
             {
-                AccountRes accountRes = JsonParser<AccountRes>(res.Content);
+                List<AccountRes> accountRes = JsonParser<AccountRes>(res.Content);
             }
             else
             {

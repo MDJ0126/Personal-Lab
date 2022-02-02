@@ -1,6 +1,7 @@
 ﻿using Newtonsoft.Json.Linq;
 using RestSharp;
 using System;
+using System.Collections.Generic;
 using System.Reflection;
 
 namespace Network
@@ -27,22 +28,25 @@ namespace Network
         protected void RequestProcess(RestRequest req, Action<bool> onFinished)
         {
             this.onFinished = onFinished;
-            restRequest?.Invoke(req, (res) =>
+            MultiThread.Start(() =>
             {
-                if (res.IsSuccessful)
+                restRequest?.Invoke(req, (res) =>
                 {
-                    // 표준 수신 처리
-                    Response(req, res);
+                    if (res.IsSuccessful)
+                    {
+                        // 표준 수신 처리
+                        Response(req, res);
 
-                    // 수신 처리 완료 콜백
-                    onFinished?.Invoke(true);
-                    onFinished = null;
-                }
-                else
-                {
-                    onFinished?.Invoke(false);
-                    onFinished = null;
-                }
+                        // 수신 처리 완료 콜백
+                        onFinished?.Invoke(true);
+                        onFinished = null;
+                    }
+                    else
+                    {
+                        onFinished?.Invoke(false);
+                        onFinished = null;
+                    }
+                });
             });
         }
 
@@ -53,15 +57,17 @@ namespace Network
         /// <param name="type"></param>
         /// <param name="jsonContent"></param>
         /// <returns></returns>
-        protected T JsonParser<T>(string jsonContent) where T : iRsponse, new()
+        protected List<T> JsonParser<T>(string jsonContent) where T : iResponse, new()
         {
-            T convertRes = new T();
+            List<T> list = new List<T>();
             try
             {
-                var array = JArray.Parse(jsonContent);
                 FieldInfo[] fieldInfos = typeof(T).GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static);
+
+                var array = JArray.Parse(jsonContent);
                 foreach (var item in array)
                 {
+                    T convertRes = new T();
                     var jObject = JObject.Parse(item.ToString());
                     for (int i = 0; i < fieldInfos.Length; i++)
                     {
@@ -118,13 +124,14 @@ namespace Network
                             }
                         }
                     }
+                    list.Add(convertRes);
                 }
             }
             catch (Exception e)
             {
                 Logger.Error(e.Message);
             }
-            return convertRes;
+            return list;
         }
     }
 }

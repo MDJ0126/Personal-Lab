@@ -9,7 +9,7 @@ namespace Network
 {
     public class WebManager : Singleton<WebManager>
     {
-        private Semaphore semaphore = new Semaphore(0, 10);
+        private Semaphore semaphore = new Semaphore(10, 10);
 
         public static readonly string BASE_URL = "https://api.upbit.com/v1/";
 

@@ -1,6 +1,6 @@
 ﻿namespace Network
 {
-    public interface iRsponse
+    public interface iResponse
     {
 
     }

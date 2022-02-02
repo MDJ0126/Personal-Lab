@@ -101,11 +101,12 @@
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Scripts\Config.cs" />
-    <Compile Include="Scripts\Network\iRsponse.cs" />
+    <Compile Include="Scripts\Network\ResponseData.cs" />
     <Compile Include="Scripts\Network\ProtocolHandlers\HandlerApiKey.cs" />
     <Compile Include="Scripts\Network\ProtocolHandlers\HandlerAccount.cs" />
     <Compile Include="Scripts\Network\ProtocolHandlers\HandlerExample.cs" />
     <Compile Include="Scripts\Network\ProtocolHandler.cs" />
+    <Compile Include="Scripts\Network\iResponse.cs" />
     <Compile Include="Scripts\Network\WebManager.cs" />
     <Compile Include="Scripts\Utility\Logger.cs" />
     <Compile Include="Scripts\Utility\MultiThread.cs" />

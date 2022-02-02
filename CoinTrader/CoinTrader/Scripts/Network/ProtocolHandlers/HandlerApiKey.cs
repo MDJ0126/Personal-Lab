@@ -1,6 +1,7 @@
 ﻿using Newtonsoft.Json.Linq;
 using RestSharp;
 using System;
+using System.Collections.Generic;
 using System.Reflection;
 
 namespace Network
@@ -8,7 +9,7 @@ namespace Network
     /// <summary>
     /// 전체 계좌 조회
     /// </summary>
-    public class ApiKeyRes : iRsponse
+    public class ApiKeyRes : iResponse
     {
         /// <summary>
         /// 사용 중인 엑세스 키
@@ -39,7 +40,7 @@ namespace Network
         {
             if (res.IsSuccessful)
             {
-                ApiKeyRes accountRes = JsonParser<ApiKeyRes>(res.Content);
+                List<ApiKeyRes> accountRes = JsonParser<ApiKeyRes>(res.Content);
             }
             else
             {
