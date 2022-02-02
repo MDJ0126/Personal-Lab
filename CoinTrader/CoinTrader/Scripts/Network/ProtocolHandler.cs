@@ -8,7 +8,7 @@ namespace Network
 {
     public abstract class ProtocolHandler
     {
-        public delegate void RestRequestDelegate(RestSharp.RestRequest request, Action<RestResponse> onResponse);
+        public delegate void RestRequestDelegate(RestRequest request, Action<RestResponse> onResponse);
         public RestRequestDelegate restRequest = null;
 
         protected Uri URI { get; set; }

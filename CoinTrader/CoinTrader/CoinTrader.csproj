@@ -107,7 +107,7 @@
     <Compile Include="Scripts\Network\ProtocolHandlers\HandlerExample.cs" />
     <Compile Include="Scripts\Network\ProtocolHandler.cs" />
     <Compile Include="Scripts\Network\iResponse.cs" />
-    <Compile Include="Scripts\Network\WebManager.cs" />
+    <Compile Include="Scripts\Network\ProtocolManager.cs" />
     <Compile Include="Scripts\Utility\Logger.cs" />
     <Compile Include="Scripts\Utility\MultiThread.cs" />
     <Compile Include="Scripts\Utility\Singleton.cs" />

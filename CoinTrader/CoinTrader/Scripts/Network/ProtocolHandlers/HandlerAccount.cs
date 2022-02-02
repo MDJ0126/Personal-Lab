@@ -41,7 +41,7 @@ namespace Network
     {
         public HandlerAccount()
         {
-            this.URI = new Uri(WebManager.BASE_URL + "accounts");
+            this.URI = new Uri(ProtocolManager.BASE_URL + "accounts");
             this.Method = Method.Get;
         }
 

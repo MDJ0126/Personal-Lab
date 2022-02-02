@@ -6,10 +6,19 @@
         get
         {
             if (instance == null)
+            {
                 instance = new T();
+                instance.Install();
+            }
             return instance;
         }
     }
+
+    ~Singleton()
+    {
+        Release();
+    }
+
     public static bool IsLive => instance != null;
     protected abstract void Install();
     protected abstract void Release();

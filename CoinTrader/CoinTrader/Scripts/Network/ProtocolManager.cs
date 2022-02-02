@@ -7,20 +7,29 @@ using System.Threading;
 
 namespace Network
 {
-    public class WebManager : Singleton<WebManager>
+    public class ProtocolManager : Singleton<ProtocolManager>
     {
-        private Semaphore semaphore = new Semaphore(10, 10);
-
         public static readonly string BASE_URL = "https://api.upbit.com/v1/";
 
         private List<ProtocolHandler> handlers = new List<ProtocolHandler>();
 
         private RestClient restClient = new RestClient(BASE_URL);
 
+        private struct RequestInfo
+        {
+            public RestRequest request;
+            public Action<RestResponse> onResponse;
+            public RequestInfo(RestRequest request, Action<RestResponse> onResponse)
+            {
+                this.request = request;
+                this.onResponse = onResponse;
+            }
+        }
+        private Queue<RequestInfo> restRequestDelegates = new Queue<RequestInfo>();
+
         protected override void Install()
         {
-            // Add Handlers
-            //this.Handlers.Add(new HandlerTest());
+            MultiThread.Start(RequestProcess);
         }
 
         protected override void Release()
@@ -30,24 +39,42 @@ namespace Network
         }
 
         /// <summary>
-        /// 요청 프로세스
+        /// 요청 등록
         /// </summary>
         /// <param name="request"></param>
         /// <param name="onResponse"></param>
-        private async void Request(RestRequest request, Action<RestResponse> onResponse)
+        private void Request(RestRequest request, Action<RestResponse> onResponse)
         {
-            // 뮤텍스 취득할 때까지 대기
-            semaphore.WaitOne();
+            restRequestDelegates.Enqueue(new RequestInfo(request, onResponse));
+        }
 
-            // Request
-            request.AddHeader("Authorization", GetAuthToken());
-            RestResponse response = await restClient.ExecuteAsync(request);
-            
-            // Response
-            onResponse?.Invoke(response);
+        /// <summary>
+        /// 요청 프로세스 (쓰레드)
+        /// </summary>
+        /// <param name="request"></param>
+        /// <param name="onResponse"></param>
+        private async void RequestProcess()
+        {
+            while (true)
+            {
+                if (restRequestDelegates.Count > 0)
+                {
+                    // 리스트 꺼내기
+                    var dequeue = restRequestDelegates.Dequeue();
 
-            // 뮤텍스 해제
-            semaphore.Release();
+                    // Request
+                    dequeue.request.AddHeader("Authorization", GetAuthToken());
+                    RestResponse response = await restClient.ExecuteAsync(dequeue.request);
+
+                    // Response
+                    dequeue.onResponse.Invoke(response);
+                }
+                else
+                {
+                    // 반복 대기 (0.1초마다 Queue 확인)
+                    Thread.Sleep(100);
+                }
+            }
         }
 
         /// <summary>

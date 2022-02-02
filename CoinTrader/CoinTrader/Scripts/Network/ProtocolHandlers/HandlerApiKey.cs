@@ -25,7 +25,7 @@ namespace Network
     {
         public HandlerApiKey()
         {
-            this.URI = new Uri(WebManager.BASE_URL + "api_keys");
+            this.URI = new Uri(ProtocolManager.BASE_URL + "api_keys");
             this.Method = Method.Get;
         }
 
