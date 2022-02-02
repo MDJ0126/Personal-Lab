@@ -15,7 +15,7 @@ namespace Network
 
         private RestClient restClient = new RestClient(BASE_URL);
 
-        private struct RequestInfo
+        private class RequestInfo
         {
             public RestRequest request;
             public Action<RestResponse> onResponse;
@@ -25,11 +25,17 @@ namespace Network
                 this.onResponse = onResponse;
             }
         }
+
         private Queue<RequestInfo> restRequestDelegates = new Queue<RequestInfo>();
 
         protected override void Install()
         {
             MultiThread.Start(RequestProcess);
+            // 여러개를 사용하면 속도가 빨라지는데, 필요할 때 다르게 사용하자
+            //MultiThread.Start(RequestProcess);
+            //MultiThread.Start(RequestProcess);
+            //MultiThread.Start(RequestProcess);
+            //MultiThread.Start(RequestProcess);
         }
 
         protected override void Release()
@@ -61,13 +67,15 @@ namespace Network
                 {
                     // 리스트 꺼내기
                     var dequeue = restRequestDelegates.Dequeue();
+                    if (dequeue != null)
+                    {
+                        // Request
+                        dequeue.request.AddHeader("Authorization", GetAuthToken());
+                        RestResponse response = await restClient.ExecuteAsync(dequeue.request);
 
-                    // Request
-                    dequeue.request.AddHeader("Authorization", GetAuthToken());
-                    RestResponse response = await restClient.ExecuteAsync(dequeue.request);
-
-                    // Response
-                    dequeue.onResponse.Invoke(response);
+                        // Response
+                        dequeue.onResponse.Invoke(response);
+                    }
                 }
                 else
                 {
