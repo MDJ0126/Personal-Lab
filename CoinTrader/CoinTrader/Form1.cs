@@ -16,8 +16,9 @@ namespace CoinTrader
         public Form1()
         {
             InitializeComponent();
-            ProtocolManager.GetHandler<HandlerAccount>().Request();
-            ProtocolManager.GetHandler<HandlerApiKey>().Request();
+            //ProtocolManager.GetHandler<HandlerAccount>().Request();
+            //ProtocolManager.GetHandler<HandlerApiKey>().Request();
+            ProtocolManager.GetHandler<HandlerTicker>().Request();
         }
     }
 }

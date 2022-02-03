@@ -47,9 +47,10 @@ namespace Network
 
         public void Request(Action<bool> onFinished = null)
         {
-            RestRequest req = new RestRequest(URI, Method);
-            req.AddHeader("Accept", "application/json");
-            base.RequestProcess(req, onFinished);
+            RestRequest request = new RestRequest(URI, Method);
+            request.AddHeader("Authorization", ProtocolManager.GetAuthToken());
+            request.AddHeader("Accept", "application/json");
+            base.RequestProcess(request, onFinished);
         }
 
         protected override void Response(RestRequest req, RestResponse res)

@@ -31,16 +31,17 @@ namespace Network
 
         public void Request(Action<bool> onFinished = null)
         {
-            RestRequest req = new RestRequest(URI, Method);
-            req.AddHeader("Accept", "application/json");
-            base.RequestProcess(req, onFinished);
+            RestRequest request = new RestRequest(URI, Method);
+            request.AddHeader("Authorization", ProtocolManager.GetAuthToken());
+            request.AddHeader("Accept", "application/json");
+            base.RequestProcess(request, onFinished);
         }
 
         protected override void Response(RestRequest req, RestResponse res)
         {
             if (res.IsSuccessful)
             {
-                List<ApiKeyRes> accountRes = JsonParser<ApiKeyRes>(res.Content);
+                List<ApiKeyRes> apiKeyRea = JsonParser<ApiKeyRes>(res.Content);
             }
             else
             {

@@ -70,7 +70,6 @@ namespace Network
                     if (dequeue != null)
                     {
                         // Request
-                        dequeue.request.AddHeader("Authorization", GetAuthToken());
                         RestResponse response = await restClient.ExecuteAsync(dequeue.request);
 
                         // Response
@@ -114,7 +113,7 @@ namespace Network
         /// </summary>
         /// <param name="parameter"></param>
         /// <returns></returns>
-        private string GetAuthToken(string parameter = "")
+        public static string GetAuthToken(string parameter = "")
         {
             var payload = new JwtPayload
             {
