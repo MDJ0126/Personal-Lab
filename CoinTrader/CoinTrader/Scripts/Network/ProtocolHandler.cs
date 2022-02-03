@@ -28,25 +28,22 @@ namespace Network
         protected void RequestProcess(RestRequest req, Action<bool> onFinished)
         {
             this.onFinished = onFinished;
-            MultiThread.Start(() =>
+            restRequest?.Invoke(req, (res) =>
             {
-                restRequest?.Invoke(req, (res) =>
+                if (res.IsSuccessful)
                 {
-                    if (res.IsSuccessful)
-                    {
-                        // 표준 수신 처리
-                        Response(req, res);
+                    // 표준 수신 처리
+                    Response(req, res);
 
-                        // 수신 처리 완료 콜백
-                        onFinished?.Invoke(true);
-                        onFinished = null;
-                    }
-                    else
-                    {
-                        onFinished?.Invoke(false);
-                        onFinished = null;
-                    }
-                });
+                    // 수신 처리 완료 콜백
+                    onFinished?.Invoke(true);
+                    onFinished = null;
+                }
+                else
+                {
+                    onFinished?.Invoke(false);
+                    onFinished = null;
+                }
             });
         }
 
