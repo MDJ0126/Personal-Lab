@@ -1,19 +1,45 @@
-﻿public class Example
+﻿using System;
+
+public class Example
 {
-    private class ClassA
+    [Flags]
+    private enum eCheck : byte
     {
-        public string name = string.Empty;
-        public int count = 0;
+        None        = 0,
+        Apple       = 1 << 0,   // 2의 1승
+        Banana      = 1 << 1,   // 2의 2승
+        Pineapple   = 1 << 2,   // 2의 3승
+        All         = byte.MaxValue,
     }
 
-    private void AddCount(ref ClassA classA)
-    {
-        classA.count++;
-    }
+    private eCheck check = eCheck.None;
 
-    private void Start()
+    public void Main()
     {
-        ClassA classA = new ClassA();
-        AddCount(ref classA); // != AddCount(classA);
+        // 추가
+        check |= eCheck.Apple;
+        check |= eCheck.Banana;
+        check |= eCheck.Pineapple;
+        Console.WriteLine(check);   // = Apple | Banana | Pineapple;
+
+        // Apple 있는지 체크
+        bool isExist = (check & eCheck.Apple) != 0;
+        Console.WriteLine($"Apple Exist Resut: {isExist}");
+
+        // 제거
+        check &= ~eCheck.Apple;
+        check &= ~eCheck.Banana;
+        check &= ~eCheck.Pineapple;
+        Console.WriteLine(check);   // = None;
+
+        // Apple 있는지 체크
+        isExist = (check & eCheck.Apple) != 0;
+        Console.WriteLine($"Apple Exist Resut: {isExist}");
+
+        // Results :
+        // Apple, Banana, Pineapple
+        // Apple Exist Resut: True
+        // None
+        // Apple Exist Resut: False
     }
 }
