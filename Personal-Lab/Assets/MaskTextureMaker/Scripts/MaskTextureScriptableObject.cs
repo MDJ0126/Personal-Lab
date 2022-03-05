@@ -2,14 +2,14 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-[CreateAssetMenu(fileName = "ImageName_MaskTextureData", menuName = "ScriptableObjects/SpawnManagerScriptableObject", order = 1)]
+[CreateAssetMenu(fileName = "MaskedTexture", menuName = "ScriptableObjects/SpawnManagerScriptableObject", order = 1)]
 public class MaskTextureScriptableObject : ScriptableObject
 {
     private static Dictionary<int, Texture2D> _maskedTextures = new Dictionary<int, Texture2D>();
 
     public Texture2D texture;
     public Texture2D maskTexture;
-    public Vector2 ccoordinate;
+    public Vector2 coordinate;
 
     /// <summary>
     /// 마스크 텍스쳐 가져오기
@@ -18,25 +18,29 @@ public class MaskTextureScriptableObject : ScriptableObject
     /// <returns></returns>
     public Texture2D GetMaskTexture(bool isRefresh = false)
     {
-        var instanceId = this.GetInstanceID();
-
-        if (isRefresh)
-            _maskedTextures.Remove(instanceId);
-
-        if (!_maskedTextures.TryGetValue(instanceId, out var texture2D))
+        if (texture != null && maskTexture != null)
         {
-            var copyTextuer = new Texture2D(texture.width, texture.height, texture.format, texture.mipmapCount, false);
-            Graphics.CopyTexture(texture, copyTextuer);
+            var instanceId = this.GetInstanceID();
 
-            var copyMaskTextuer = new Texture2D(maskTexture.width, maskTexture.height, maskTexture.format, maskTexture.mipmapCount, false);
-            Graphics.CopyTexture(maskTexture, copyMaskTextuer);
+            if (isRefresh)
+                _maskedTextures.Remove(instanceId);
 
-            texture2D = new Texture2D(maskTexture.width, maskTexture.height, TextureFormat.RGBA32, texture.mipmapCount, false);
-            Graphics.CopyTexture(MakeMaskedTexture(copyTextuer, copyMaskTextuer, ccoordinate), texture2D);
-            texture2D.name = "Masked Texture (Instance)";
-            _maskedTextures.Add(instanceId, texture2D);
+            if (!_maskedTextures.TryGetValue(instanceId, out var texture2D))
+            {
+                var copyTextuer = new Texture2D(texture.width, texture.height, texture.format, texture.mipmapCount, false);
+                Graphics.CopyTexture(texture, copyTextuer);
+
+                var copyMaskTextuer = new Texture2D(maskTexture.width, maskTexture.height, maskTexture.format, maskTexture.mipmapCount, false);
+                Graphics.CopyTexture(maskTexture, copyMaskTextuer);
+
+                texture2D = new Texture2D(maskTexture.width, maskTexture.height, TextureFormat.RGBA32, texture.mipmapCount, false);
+                Graphics.CopyTexture(MakeMaskedTexture(copyTextuer, copyMaskTextuer, coordinate), texture2D);
+                texture2D.name = "Masked Texture (Instance)";
+                _maskedTextures.Add(instanceId, texture2D);
+            }
+            return texture2D;
         }
-        return texture2D;
+        return null;
     }
 
     /// <summary>
