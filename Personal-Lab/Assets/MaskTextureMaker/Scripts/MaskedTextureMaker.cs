@@ -6,6 +6,8 @@ using UnityEngine.SceneManagement;
 
 public class MaskedTextureMaker : MonoBehaviour
 {
+    public static bool isOnDebugGUI = false;
+
     #region Singleton
 
     private static MaskedTextureMaker instance = null;
@@ -30,7 +32,7 @@ public class MaskedTextureMaker : MonoBehaviour
 
     #endregion
 
-    #region RuntimeInitializeOnLoadMethod
+    #region Initialize
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
     private static void Initialize()
     {
@@ -41,7 +43,7 @@ public class MaskedTextureMaker : MonoBehaviour
     }
     #endregion
 
-    private struct Message
+    private class Message
     {
         public MaskTextureData maskTextureData;
         public event Action<Texture2D> onFinished;
@@ -52,6 +54,8 @@ public class MaskedTextureMaker : MonoBehaviour
     }
 
     private Queue<Message> requestMessageQueue = new Queue<Message>();
+    private string progressText = string.Empty;
+    private Color color = Color.white;
 
     private void Awake()
     {
@@ -107,6 +111,7 @@ public class MaskedTextureMaker : MonoBehaviour
     }
 
     private WaitForEndOfFrame WaitForEndOfFrame = new WaitForEndOfFrame();
+
     /// <summary>
     /// Make Preocesser Updater
     /// </summary>
@@ -130,7 +135,15 @@ public class MaskedTextureMaker : MonoBehaviour
 
                 if (!MaskTextureData.maskedTextures.TryGetValue(name, out texture2D))
                 {
-                    texture2D = message.maskTextureData.MakeMaskedTexture();
+                    yield return StartCoroutine(message.maskTextureData.MakeMaskedTextureAsyc((resultTexture) =>
+                    {
+                        texture2D = resultTexture;
+                    },
+                    (progressText, color) =>
+                    {
+                        this.progressText = progressText;
+                        this.color = color;
+                    }));
                     MaskTextureData.maskedTextures.Add(name, texture2D);
                 }
                 message.InvokeOnFinished(texture2D);
@@ -140,4 +153,73 @@ public class MaskedTextureMaker : MonoBehaviour
             yield return WaitForEndOfFrame;
         }
     }
+
+#if UNITY_EDITOR
+    
+    private void OnGUI()
+    {
+        if (isOnDebugGUI)
+        {
+            GUIStyle style = new GUIStyle();
+            style.fontStyle = FontStyle.Bold;
+            style.fontSize = 14;
+            DrawTextWithOutline(new Rect(10, 10, 300, 100), progressText, style, Color.black, color, 0.5f);
+        }
+    }
+
+    /// <summary>
+    /// Outline GUI Label
+    /// https://answers.unity.com/questions/160285/text-with-outline.html
+    /// </summary>
+    /// <param name="centerRect"></param>
+    /// <param name="text"></param>
+    /// <param name="style"></param>
+    /// <param name="borderColor"></param>
+    /// <param name="innerColor"></param>
+    /// <param name="borderWidth"></param>
+    private void DrawTextWithOutline(Rect centerRect, string text, GUIStyle style, Color borderColor, Color innerColor, float borderWidth)
+    {
+        // assign the border color
+        style.normal.textColor = borderColor;
+
+        // draw an outline color copy to the left and up from original
+        Rect modRect = centerRect;
+        modRect.x -= borderWidth;
+        modRect.y -= borderWidth;
+        GUI.Label(modRect, text, style);
+
+
+        // stamp copies from the top left corner to the top right corner
+        while (modRect.x <= centerRect.x + borderWidth)
+        {
+            modRect.x++;
+            GUI.Label(modRect, text, style);
+        }
+
+        // stamp copies from the top right corner to the bottom right corner
+        while (modRect.y <= centerRect.y + borderWidth)
+        {
+            modRect.y++;
+            GUI.Label(modRect, text, style);
+        }
+
+        // stamp copies from the bottom right corner to the bottom left corner
+        while (modRect.x >= centerRect.x - borderWidth)
+        {
+            modRect.x--;
+            GUI.Label(modRect, text, style);
+        }
+
+        // stamp copies from the bottom left corner to the top left corner
+        while (modRect.y >= centerRect.y - borderWidth)
+        {
+            modRect.y--;
+            GUI.Label(modRect, text, style);
+        }
+
+        // draw the inner color version in the center
+        style.normal.textColor = innerColor;
+        GUI.Label(centerRect, text, style);
+    }
+#endif
 }

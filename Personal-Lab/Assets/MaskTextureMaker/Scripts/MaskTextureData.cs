@@ -92,12 +92,61 @@ public class MaskTextureData : ScriptableObject
                 //texturePixel.b += maskPixel.b;
                 texturePixel.a = maskPixel.a;
             }
-
             result.SetPixel(maskX, maskY, texturePixel);
         }
         result.name = "Masked Texture (Instance)";
         result.Apply();
 
         return result;
+    }
+
+    private WaitForEndOfFrame WaitForEndOfFrame = new WaitForEndOfFrame();
+    /// <summary>
+    /// 대상 텍스쳐를 영역만큼 잘라서 반환
+    /// </summary>
+    /// <returns>마스킹 적용된 텍스쳐 반환</returns>
+    public IEnumerator MakeMaskedTextureAsyc(Action<Texture2D> onFinished, Action<string, Color> progressText)
+    {
+        var texture = GetReadableTexture();
+        var maskTexture = GetReadableMaskTexture();
+
+        Texture2D result = new Texture2D(Mathf.RoundToInt(maskTexture.width), Mathf.RoundToInt(maskTexture.height), TextureFormat.RGBA32, 1, false);
+        var pixels = result.GetPixels();
+
+        float roopTime = Time.deltaTime;
+        float time = 0f;
+        float startupTime = Time.realtimeSinceStartup;
+        for (int i = 0; i < pixels.Length; i++)
+        {
+            int maskX = i % Mathf.RoundToInt(maskTexture.width);
+            int maskY = i / Mathf.RoundToInt(maskTexture.width);
+            int x = Mathf.RoundToInt(coordinate.x) + maskX;
+            int y = Mathf.RoundToInt(coordinate.y) + maskY;
+            var texturePixel = texture.GetPixel(x, y);
+            var maskPixel = maskTexture.GetPixel(maskX, maskY);
+
+            if (texturePixel.a != 0f)
+            {
+                //texturePixel.r += maskPixel.r;
+                //texturePixel.g += maskPixel.g;
+                //texturePixel.b += maskPixel.b;
+                texturePixel.a = maskPixel.a;
+            }
+            result.SetPixel(maskX, maskY, texturePixel);
+
+            time = Time.realtimeSinceStartup - startupTime;
+            if (roopTime < time)
+            {
+                time = 0f;
+                startupTime = Time.realtimeSinceStartup;
+                progressText.Invoke($"Masking '{this.fileName}'.. {((float)i / pixels.Length) * 100f:N0}%", Color.gray);
+                yield return WaitForEndOfFrame;
+            }
+        }
+        result.name = "Masked Texture (Instance)";
+        result.Apply();
+        onFinished.Invoke(result);
+        progressText.Invoke($"Masking '{this.fileName}'.. Complete!", Color.white);
+        Debug.Log($"<color=cyan>Loaded Masking '{this.fileName}'</color>");
     }
 }
