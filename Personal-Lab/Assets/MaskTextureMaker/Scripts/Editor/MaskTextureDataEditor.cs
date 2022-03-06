@@ -1,22 +1,26 @@
 ﻿using UnityEditor;
 using UnityEngine;
 
-[CustomEditor(typeof(MaskTextureScriptableObject)), CanEditMultipleObjects]
-public class MaskTextureScriptableObjectEditor : Editor
+[CustomEditor(typeof(MaskTextureData)), CanEditMultipleObjects]
+public class MaskTextureDataEditor : Editor
 {
-    private MaskTextureScriptableObject _maskTextureScriptableObject = null;
+    private MaskTextureData _maskTextureData = null;
 
     private Texture2D _previewTexture2D = null;
 
     private void OnEnable()
     {
-        _maskTextureScriptableObject = (MaskTextureScriptableObject)target;
-        SetPreviewMask();
+        _maskTextureData = (MaskTextureData)target;
+        SetData();
     }
 
-    private void SetPreviewMask()
+    private void SetData()
     {
-        _previewTexture2D = _maskTextureScriptableObject.GetMaskTexture(true);
+        _maskTextureData.fileName = _maskTextureData.name;
+        _maskTextureData.RequestMaskTexture((texture2D) => 
+        {
+            _previewTexture2D = texture2D;
+        }, true);
     }
 
     public override void OnInspectorGUI()
@@ -24,7 +28,7 @@ public class MaskTextureScriptableObjectEditor : Editor
         base.OnInspectorGUI();
         if (GUI.changed)
         {
-            SetPreviewMask();
+            SetData();
         }
     }
 
@@ -34,7 +38,7 @@ public class MaskTextureScriptableObjectEditor : Editor
         if (_previewTexture2D != null)
         {
             var texture = _previewTexture2D;
-            var mask = _maskTextureScriptableObject.maskTexture;
+            var mask = _maskTextureData.maskTexture;
 
             Rect outerRect = r;
             outerRect.width = mask.width;
@@ -64,7 +68,7 @@ public class MaskTextureScriptableObjectEditor : Editor
 
             GUI.DrawTexture(r, texture, ScaleMode.ScaleToFit);
 
-            // Size label
+            // Title label
             string infoText = "Masked Texture Example";
             EditorGUI.DropShadowLabel(GUILayoutUtility.GetRect(Screen.width, 18f), infoText);
 
@@ -75,7 +79,7 @@ public class MaskTextureScriptableObjectEditor : Editor
     }
 
     /// <summary>
-    /// 체커 만들기
+    /// Create a checker-background texture
     /// </summary>
     /// <param name="c0"></param>
     /// <param name="c1"></param>
@@ -97,6 +101,9 @@ public class MaskTextureScriptableObjectEditor : Editor
         return tex;
     }
 
+    /// <summary>
+    /// Draws the tiled texture. Like GUI.DrawTexture() but tiled instead of stretched.
+    /// </summary>
     private void DrawTiledTexture(Rect rect, Texture tex)
     {
         GUI.BeginGroup(rect);
