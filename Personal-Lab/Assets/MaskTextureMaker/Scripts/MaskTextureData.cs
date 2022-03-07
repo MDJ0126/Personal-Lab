@@ -16,18 +16,23 @@ public class MaskTextureData : ScriptableObject
     public Texture2D maskTexture;
     public Vector2 coordinate;
 
-    private Texture2D GetReadableTexture()
+    private Texture2D GetReadableTexture2D(Texture2D source)
     {
-        var copyTextuer = new Texture2D(texture.width, texture.height, texture.format, texture.mipmapCount, false);
-        Graphics.CopyTexture(texture, copyTextuer);
-        return copyTextuer;
-    }
-
-    private Texture2D GetReadableMaskTexture()
-    {
-        var copyMaskTextuer = new Texture2D(maskTexture.width, maskTexture.height, maskTexture.format, maskTexture.mipmapCount, false);
-        Graphics.CopyTexture(maskTexture, copyMaskTextuer);
-        return copyMaskTextuer;
+        RenderTexture renderTex = RenderTexture.GetTemporary(
+                    source.width,
+                    source.height,
+                    0,
+                    RenderTextureFormat.Default,
+                    RenderTextureReadWrite.Linear);
+        Graphics.Blit(source, renderTex);
+        RenderTexture previous = RenderTexture.active;
+        RenderTexture.active = renderTex;
+        Texture2D readableTexture = new Texture2D(source.width, source.height);
+        readableTexture.ReadPixels(new Rect(0, 0, renderTex.width, renderTex.height), 0, 0);
+        readableTexture.Apply();
+        RenderTexture.active = previous;
+        RenderTexture.ReleaseTemporary(renderTex);
+        return readableTexture;
     }
 
     /// <summary>
@@ -71,8 +76,8 @@ public class MaskTextureData : ScriptableObject
     /// <returns>마스킹 적용된 텍스쳐 반환</returns>
     public Texture2D MakeMaskedTexture()
     {
-        var texture = GetReadableTexture();
-        var maskTexture = GetReadableMaskTexture();
+        var texture = GetReadableTexture2D(this.texture);
+        var maskTexture = GetReadableTexture2D(this.maskTexture);
 
         Texture2D result = new Texture2D(Mathf.RoundToInt(maskTexture.width), Mathf.RoundToInt(maskTexture.height), TextureFormat.RGBA32, 1, false);
         var pixels = result.GetPixels();
@@ -107,8 +112,8 @@ public class MaskTextureData : ScriptableObject
     /// <returns>마스킹 적용된 텍스쳐 반환</returns>
     public IEnumerator MakeMaskedTextureAsyc(Action<Texture2D> onFinished, Action<string, Color> progressText)
     {
-        var texture = GetReadableTexture();
-        var maskTexture = GetReadableMaskTexture();
+        var texture = GetReadableTexture2D(this.texture);
+        var maskTexture = GetReadableTexture2D(this.maskTexture);
 
         Texture2D result = new Texture2D(Mathf.RoundToInt(maskTexture.width), Mathf.RoundToInt(maskTexture.height), TextureFormat.RGBA32, 1, false);
         var pixels = result.GetPixels();
