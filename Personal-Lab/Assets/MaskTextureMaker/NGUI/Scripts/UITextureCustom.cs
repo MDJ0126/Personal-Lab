@@ -28,6 +28,7 @@ public class UITextureCustom : UITexture
     protected override void OnStart()
     {
         base.OnStart();
+        mainTexture = null;
         if (maskTextureScriptableObject != null)
         {
             maskTextureScriptableObject.RequestMaskTexture((texture2D) =>
