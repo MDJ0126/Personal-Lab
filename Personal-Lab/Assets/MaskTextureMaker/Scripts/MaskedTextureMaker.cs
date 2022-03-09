@@ -94,7 +94,7 @@ namespace MaskTextureMaker
             var enumerator = requestMessageQueue.GetEnumerator();
             while (enumerator.MoveNext())
             {
-                if (enumerator.Current.maskTextureData.fileName == maskTextureData.fileName)
+                if (enumerator.Current.maskTextureData.InstanceId == maskTextureData.InstanceId)
                 {
                     enumerator.Current.onFinished += onFinished;
                     isRequested = true;
@@ -124,7 +124,7 @@ namespace MaskTextureMaker
                 if (requestMessageQueue.Count > 0)
                 {
                     var message = requestMessageQueue.Dequeue();
-                    var name = message.maskTextureData.fileName;
+                    var name = message.maskTextureData.InstanceId;
 
                     Texture2D texture2D = null;
 

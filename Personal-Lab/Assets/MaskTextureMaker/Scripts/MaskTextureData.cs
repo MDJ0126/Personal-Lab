@@ -6,7 +6,7 @@ using UnityEngine;
 [CreateAssetMenu(fileName = "Masked Texture", menuName = "ScriptableObjects/Masked Texture")]
 public class MaskTextureData : ScriptableObject
 {
-    public static Dictionary<string, Texture2D> maskedTextures = new Dictionary<string, Texture2D>();
+    public static Dictionary<int, Texture2D> maskedTextures = new Dictionary<int, Texture2D>();
     public static void Release() => maskedTextures.Clear();
 
     private enum WriteSpeed
@@ -16,13 +16,13 @@ public class MaskTextureData : ScriptableObject
         Fast,
     }
 
-    [HideInInspector]
-    public string fileName;
     public Texture2D texture;
     public Texture2D maskTexture;
     public Vector2 coordinate;
     [SerializeField]
     private WriteSpeed runTimeWriteSpeed = WriteSpeed.Default;
+
+    public int InstanceId => GetInstanceID();
 
     private Texture2D GetReadableTexture2D(Texture2D source)
     {
@@ -63,19 +63,19 @@ public class MaskTextureData : ScriptableObject
             else
             {
                 if (isRefresh)
-                    maskedTextures.Remove(this.fileName);
+                    maskedTextures.Remove(InstanceId);
 
                 Texture2D texture2D = null;
-                if (maskedTextures.TryGetValue(this.fileName, out texture2D))
+                if (maskedTextures.TryGetValue(InstanceId, out texture2D))
                 {
                     if (texture2D == null)
-                        maskedTextures.Remove(this.fileName);
+                        maskedTextures.Remove(InstanceId);
                 }
 
-                if (!maskedTextures.TryGetValue(this.fileName, out texture2D))
+                if (!maskedTextures.TryGetValue(InstanceId, out texture2D))
                 {
                     texture2D = MakeMaskedTexture();
-                    maskedTextures.Add(this.fileName, texture2D);
+                    maskedTextures.Add(InstanceId, texture2D);
                 }
                 onFinished?.Invoke(texture2D);
             }
@@ -164,7 +164,7 @@ public class MaskTextureData : ScriptableObject
                     yield return WaitForEndOfFrame;
                     time = 0f;
                     startupTime = Time.realtimeSinceStartup;
-                    progressText.Invoke($"Masking '{this.fileName}'.. {((float)i / pixels.Length) * 100f:N0}%", Color.gray);
+                    progressText.Invoke($"Masking '{name}'.. {((float)i / pixels.Length) * 100f:N0}%", Color.gray);
                 }
             }
             result.name = "Masked Texture (Instance)";
@@ -174,8 +174,8 @@ public class MaskTextureData : ScriptableObject
         else
             onFinished.Invoke(texture);
 
-        progressText.Invoke($"Masking '{this.fileName}'.. Complete!", Color.white);
-        Debug.Log($"<color=cyan>Loaded Masking '{this.fileName}'</color>");
+        progressText.Invoke($"Masking '{name}'.. Complete!", Color.white);
+        Debug.Log($"<color=cyan>Loaded Masking '{name}'</color>");
     }
 
     /// <summary>

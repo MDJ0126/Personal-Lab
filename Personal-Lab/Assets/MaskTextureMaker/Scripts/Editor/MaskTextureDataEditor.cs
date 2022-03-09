@@ -16,7 +16,6 @@ public class MaskTextureDataEditor : Editor
 
     private void SetData()
     {
-        _maskTextureData.fileName = _maskTextureData.name;
         _maskTextureData.RequestMaskTexture((texture2D) => 
         {
             _previewTexture2D = texture2D;
