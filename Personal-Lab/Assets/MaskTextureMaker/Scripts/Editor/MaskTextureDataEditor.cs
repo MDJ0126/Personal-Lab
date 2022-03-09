@@ -8,20 +8,21 @@ public class MaskTextureDataEditor : Editor
 
     private Texture2D _previewTexture2D = null;
 
-    private bool IsSingleSelectionObject => Selection.objects.Length == 1;
+    private int SelectedObjectCount => Selection.objects.Length;
+    private bool IsSingleSelectionObject => SelectedObjectCount == 1;
 
     private void OnEnable()
     {
         _maskTextureData = (MaskTextureData)target;
-        SetData();
+        SetPreviewTexture();
     }
 
-    private void SetData()
+    private void SetPreviewTexture()
     {
-        _maskTextureData.RequestMaskTexture((texture2D) => 
+        _maskTextureData.RequestMaskTexture((texture2D) =>
         {
             _previewTexture2D = texture2D;
-        }, true);
+        });
     }
 
     public override void OnInspectorGUI()
@@ -34,13 +35,13 @@ public class MaskTextureDataEditor : Editor
         }
         else
         {
-            EditorGUILayout.LabelField("Multi Data Selected", new GUIStyle("WhiteLabel"));
+            EditorGUILayout.LabelField($"Multiple data was selected. ({SelectedObjectCount} Datas)", new GUIStyle("WhiteLabel"));
         }
 
         base.OnInspectorGUI();
         if (GUI.changed)
         {
-            SetData();
+            SetPreviewTexture();
         }
     }
 

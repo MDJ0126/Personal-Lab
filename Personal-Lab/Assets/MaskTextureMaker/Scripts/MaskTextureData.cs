@@ -52,7 +52,7 @@ public class MaskTextureData : ScriptableObject
     /// </summary>
     /// <param name="isRefresh">갱신 여부</param>
     /// <returns></returns>
-    public void RequestMaskTexture(Action<Texture2D> onFinished, bool isRefresh = false)
+    public void RequestMaskTexture(Action<Texture2D> onFinished)
     {
         if (texture != null)
         {
@@ -62,9 +62,6 @@ public class MaskTextureData : ScriptableObject
             }
             else
             {
-                if (isRefresh)
-                    maskedTextures.Remove(InstanceId);
-
                 Texture2D texture2D = null;
                 if (maskedTextures.TryGetValue(InstanceId, out texture2D))
                 {
@@ -114,7 +111,7 @@ public class MaskTextureData : ScriptableObject
                 }
                 result.SetPixel(maskX, maskY, texturePixel);
             }
-            result.name = "Masked Texture (Instance)";
+            result.name = $"Masked {name} Texture (Instance)";
             result.Apply();
 
             return result;
@@ -169,7 +166,7 @@ public class MaskTextureData : ScriptableObject
 #endif
                 }
             }
-            result.name = "Masked Texture (Instance)";
+            result.name = $"Masked {name} Texture (Instance)";
             result.Apply();
             onFinished.Invoke(result);
         }
@@ -203,5 +200,10 @@ public class MaskTextureData : ScriptableObject
                 break;
         }
         return speed;
+    }
+
+    public override string ToString()
+    {
+        return $"{name}";
     }
 }
