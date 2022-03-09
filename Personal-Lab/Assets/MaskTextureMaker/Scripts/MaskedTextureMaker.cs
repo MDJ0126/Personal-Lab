@@ -55,7 +55,8 @@ namespace MaskTextureMaker
             }
         }
 
-        private Queue<Message> requestMessageQueue = new Queue<Message>();
+        private Queue<Message> messageQueue = new Queue<Message>();
+        private List<Message> makingList = new List<Message>();
         private string progressText = string.Empty;
         private Color color = Color.white;
 
@@ -88,28 +89,30 @@ namespace MaskTextureMaker
         /// <param name="onFinished"></param>
         public void RequestMaskTexture(MaskTextureData maskTextureData, Action<Texture2D> onFinished)
         {
-            bool isRequested = false;
+            // 텍스쳐 제작 중에 있는지 체크
+            var making = makingList.Find(item => item.maskTextureData.InstanceId == maskTextureData.InstanceId);
+            if (making != null)
+            {
+                making.onFinished += onFinished;
+                return;
+            }
 
             // 이미 이미지 요청을 한 경우에는 이벤트 구독만 추가해준다.
-            var enumerator = requestMessageQueue.GetEnumerator();
+            var enumerator = messageQueue.GetEnumerator();
             while (enumerator.MoveNext())
             {
                 if (enumerator.Current.maskTextureData.InstanceId == maskTextureData.InstanceId)
                 {
                     enumerator.Current.onFinished += onFinished;
-                    isRequested = true;
-                    break;
+                    return;
                 }
             }
 
             // 마스크 이미지 제작 요청
-            if (!isRequested)
-            {
-                Message message = new Message();
-                message.maskTextureData = maskTextureData;
-                message.onFinished += onFinished;
-                requestMessageQueue.Enqueue(message);
-            }
+            Message message = new Message();
+            message.maskTextureData = maskTextureData;
+            message.onFinished += onFinished;
+            messageQueue.Enqueue(message);
         }
 
         private WaitForEndOfFrame WaitForEndOfFrame = new WaitForEndOfFrame();
@@ -121,9 +124,9 @@ namespace MaskTextureMaker
         {
             while (true)
             {
-                if (requestMessageQueue.Count > 0)
+                if (messageQueue.Count > 0)
                 {
-                    var message = requestMessageQueue.Dequeue();
+                    var message = messageQueue.Dequeue();
                     var name = message.maskTextureData.InstanceId;
 
                     Texture2D texture2D = null;
@@ -136,9 +139,12 @@ namespace MaskTextureMaker
 
                     if (!MaskTextureData.maskedTextures.TryGetValue(name, out texture2D))
                     {
-                        yield return StartCoroutine(message.maskTextureData.MakeMaskedTextureAsyc((resultTexture) =>
+                        makingList.Add(message);
+                        StartCoroutine(message.maskTextureData.MakeMaskedTextureAsyc((resultTexture) =>
                         {
                             texture2D = resultTexture;
+                            makingList.Remove(message);
+                            message.InvokeOnFinished(texture2D);
                         },
                         (progressText, color) =>
                         {
@@ -147,7 +153,8 @@ namespace MaskTextureMaker
                         }));
                         MaskTextureData.maskedTextures.Add(name, texture2D);
                     }
-                    message.InvokeOnFinished(texture2D);
+                    else
+                        message.InvokeOnFinished(texture2D);
                 }
 
                 // Delay
