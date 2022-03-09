@@ -1,31 +1,35 @@
 ﻿using UnityEditor;
 using UnityEngine;
 
-public static class MaskedTextureMakerUtils
+namespace MaskTextureMaker
 {
-    public const string MENU_NAME = "MaskedTextureMaker/View Debug OnGUI";
-    public static bool isOnDebugGUI = false;
-
-    [InitializeOnLoadMethod]
-    private static void Initialize()
+    public static class MaskedTextureMakerUtils
     {
-        isOnDebugGUI = EditorPrefs.GetBool(MENU_NAME, false);
-        EditorApplication.delayCall += () => {
-            PerformAction(isOnDebugGUI);
-        };
-    }
+        public const string MENU_NAME = "MaskedTextureMaker/View Debug OnGUI";
+        public static bool isOnDebugGUI = false;
 
-    [MenuItem(MENU_NAME)]
-    private static void ViewDebugOnGUIMenu()
-    {
-        PerformAction(!isOnDebugGUI);
-    }
+        [InitializeOnLoadMethod]
+        private static void Initialize()
+        {
+            isOnDebugGUI = EditorPrefs.GetBool(MENU_NAME, false);
+            EditorApplication.delayCall += () =>
+            {
+                PerformAction(isOnDebugGUI);
+            };
+        }
 
-    public static void PerformAction(bool enabled)
-    {
-        Menu.SetChecked(MENU_NAME, enabled);
-        EditorPrefs.SetBool(MENU_NAME, enabled);
-        isOnDebugGUI = enabled;
-        MaskedTextureMaker.isOnDebugGUI = isOnDebugGUI;
+        [MenuItem(MENU_NAME)]
+        private static void ViewDebugOnGUIMenu()
+        {
+            PerformAction(!isOnDebugGUI);
+        }
+
+        public static void PerformAction(bool enabled)
+        {
+            Menu.SetChecked(MENU_NAME, enabled);
+            EditorPrefs.SetBool(MENU_NAME, enabled);
+            isOnDebugGUI = enabled;
+            MaskedTextureMaker.isOnDebugGUI = isOnDebugGUI;
+        }
     }
 }

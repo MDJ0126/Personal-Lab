@@ -7,32 +7,44 @@ using UnityEngine;
 public class MaskTextureData : ScriptableObject
 {
     public static Dictionary<string, Texture2D> maskedTextures = new Dictionary<string, Texture2D>();
-
     public static void Release() => maskedTextures.Clear();
+
+    private enum WriteSpeed
+    {
+        Slow,
+        Default,
+        Fast,
+    }
 
     [HideInInspector]
     public string fileName;
     public Texture2D texture;
     public Texture2D maskTexture;
     public Vector2 coordinate;
+    [SerializeField]
+    private WriteSpeed runTimeWriteSpeed = WriteSpeed.Default;
 
     private Texture2D GetReadableTexture2D(Texture2D source)
     {
-        RenderTexture renderTex = RenderTexture.GetTemporary(
-                    source.width,
-                    source.height,
-                    0,
-                    RenderTextureFormat.Default,
-                    RenderTextureReadWrite.Linear);
-        Graphics.Blit(source, renderTex);
-        RenderTexture previous = RenderTexture.active;
-        RenderTexture.active = renderTex;
-        Texture2D readableTexture = new Texture2D(source.width, source.height);
-        readableTexture.ReadPixels(new Rect(0, 0, renderTex.width, renderTex.height), 0, 0);
-        readableTexture.Apply();
-        RenderTexture.active = previous;
-        RenderTexture.ReleaseTemporary(renderTex);
-        return readableTexture;
+        if (source != null)
+        {
+            RenderTexture renderTex = RenderTexture.GetTemporary(
+                        source.width,
+                        source.height,
+                        0,
+                        RenderTextureFormat.Default,
+                        RenderTextureReadWrite.Linear);
+            Graphics.Blit(source, renderTex);
+            RenderTexture previous = RenderTexture.active;
+            RenderTexture.active = renderTex;
+            Texture2D readableTexture = new Texture2D(source.width, source.height);
+            readableTexture.ReadPixels(new Rect(0, 0, renderTex.width, renderTex.height), 0, 0);
+            readableTexture.Apply();
+            RenderTexture.active = previous;
+            RenderTexture.ReleaseTemporary(renderTex);
+            return readableTexture;
+        }
+        return null;
     }
 
     /// <summary>
@@ -42,11 +54,11 @@ public class MaskTextureData : ScriptableObject
     /// <returns></returns>
     public void RequestMaskTexture(Action<Texture2D> onFinished, bool isRefresh = false)
     {
-        if (texture != null && maskTexture != null)
+        if (texture != null)
         {
             if (Application.isPlaying)
             {
-                MaskedTextureMaker.Instance.RequestMaskTexture(this, onFinished);
+                MaskTextureMaker.MaskedTextureMaker.Instance.RequestMaskTexture(this, onFinished);
             }
             else
             {
@@ -68,6 +80,8 @@ public class MaskTextureData : ScriptableObject
                 onFinished?.Invoke(texture2D);
             }
         }
+        else
+            onFinished?.Invoke(null);
     }
 
     /// <summary>
@@ -78,31 +92,34 @@ public class MaskTextureData : ScriptableObject
     {
         var texture = GetReadableTexture2D(this.texture);
         var maskTexture = GetReadableTexture2D(this.maskTexture);
-
-        Texture2D result = new Texture2D(Mathf.RoundToInt(maskTexture.width), Mathf.RoundToInt(maskTexture.height), TextureFormat.RGBA32, 1, false);
-        var pixels = result.GetPixels();
-        for (int i = 0; i < pixels.Length; i++)
+        if (maskTexture != null)
         {
-            int maskX = i % Mathf.RoundToInt(maskTexture.width);
-            int maskY = i / Mathf.RoundToInt(maskTexture.width);
-            int x = Mathf.RoundToInt(coordinate.x) + maskX;
-            int y = Mathf.RoundToInt(coordinate.y) + maskY;
-            var texturePixel = texture.GetPixel(x, y);
-            var maskPixel = maskTexture.GetPixel(maskX, maskY);
-
-            if (texturePixel.a != 0f)
+            Texture2D result = new Texture2D(Mathf.RoundToInt(maskTexture.width), Mathf.RoundToInt(maskTexture.height), TextureFormat.RGBA32, 1, false);
+            var pixels = result.GetPixels();
+            for (int i = 0; i < pixels.Length; i++)
             {
-                //texturePixel.r += maskPixel.r;
-                //texturePixel.g += maskPixel.g;
-                //texturePixel.b += maskPixel.b;
-                texturePixel.a = maskPixel.a;
-            }
-            result.SetPixel(maskX, maskY, texturePixel);
-        }
-        result.name = "Masked Texture (Instance)";
-        result.Apply();
+                int maskX = i % Mathf.RoundToInt(maskTexture.width);
+                int maskY = i / Mathf.RoundToInt(maskTexture.width);
+                int x = Mathf.RoundToInt(coordinate.x) + maskX;
+                int y = Mathf.RoundToInt(coordinate.y) + maskY;
+                var texturePixel = texture.GetPixel(x, y);
+                var maskPixel = maskTexture.GetPixel(maskX, maskY);
 
-        return result;
+                if (texturePixel.a != 0f)
+                {
+                    //texturePixel.r += maskPixel.r;
+                    //texturePixel.g += maskPixel.g;
+                    //texturePixel.b += maskPixel.b;
+                    texturePixel.a = maskPixel.a;
+                }
+                result.SetPixel(maskX, maskY, texturePixel);
+            }
+            result.name = "Masked Texture (Instance)";
+            result.Apply();
+
+            return result;
+        }
+        return texture;
     }
 
     private WaitForEndOfFrame WaitForEndOfFrame = new WaitForEndOfFrame();
@@ -115,43 +132,73 @@ public class MaskTextureData : ScriptableObject
         var texture = GetReadableTexture2D(this.texture);
         var maskTexture = GetReadableTexture2D(this.maskTexture);
 
-        Texture2D result = new Texture2D(Mathf.RoundToInt(maskTexture.width), Mathf.RoundToInt(maskTexture.height), TextureFormat.RGBA32, 1, false);
-        var pixels = result.GetPixels();
-
-        float roopTime = Time.deltaTime;
-        float time = 0f;
-        float startupTime = Time.realtimeSinceStartup;
-        for (int i = 0; i < pixels.Length; i++)
+        if (maskTexture != null)
         {
-            int maskX = i % Mathf.RoundToInt(maskTexture.width);
-            int maskY = i / Mathf.RoundToInt(maskTexture.width);
-            int x = Mathf.RoundToInt(coordinate.x) + maskX;
-            int y = Mathf.RoundToInt(coordinate.y) + maskY;
-            var texturePixel = texture.GetPixel(x, y);
-            var maskPixel = maskTexture.GetPixel(maskX, maskY);
+            Texture2D result = new Texture2D(Mathf.RoundToInt(maskTexture.width), Mathf.RoundToInt(maskTexture.height), TextureFormat.RGBA32, 1, false);
+            var pixels = result.GetPixels();
 
-            if (texturePixel.a != 0f)
+            float roofTime = GetWriteSpeed();
+            float time = 0f;
+            float startupTime = Time.realtimeSinceStartup;
+            for (int i = 0; i < pixels.Length; i++)
             {
-                //texturePixel.r += maskPixel.r;
-                //texturePixel.g += maskPixel.g;
-                //texturePixel.b += maskPixel.b;
-                texturePixel.a = maskPixel.a;
-            }
-            result.SetPixel(maskX, maskY, texturePixel);
+                int maskX = i % Mathf.RoundToInt(maskTexture.width);
+                int maskY = i / Mathf.RoundToInt(maskTexture.width);
+                int x = Mathf.RoundToInt(coordinate.x) + maskX;
+                int y = Mathf.RoundToInt(coordinate.y) + maskY;
+                var texturePixel = texture.GetPixel(x, y);
+                var maskPixel = maskTexture.GetPixel(maskX, maskY);
 
-            time = Time.realtimeSinceStartup - startupTime;
-            if (roopTime < time)
-            {
-                time = 0f;
-                startupTime = Time.realtimeSinceStartup;
-                progressText.Invoke($"Masking '{this.fileName}'.. {((float)i / pixels.Length) * 100f:N0}%", Color.gray);
-                yield return WaitForEndOfFrame;
+                if (texturePixel.a != 0f)
+                {
+                    //texturePixel.r += maskPixel.r;
+                    //texturePixel.g += maskPixel.g;
+                    //texturePixel.b += maskPixel.b;
+                    texturePixel.a = maskPixel.a;
+                }
+                result.SetPixel(maskX, maskY, texturePixel);
+
+                time = Time.realtimeSinceStartup - startupTime;
+                if (roofTime < time)
+                {
+                    yield return WaitForEndOfFrame;
+                    time = 0f;
+                    startupTime = Time.realtimeSinceStartup;
+                    progressText.Invoke($"Masking '{this.fileName}'.. {((float)i / pixels.Length) * 100f:N0}%", Color.gray);
+                }
             }
+            result.name = "Masked Texture (Instance)";
+            result.Apply();
+            onFinished.Invoke(result);
         }
-        result.name = "Masked Texture (Instance)";
-        result.Apply();
-        onFinished.Invoke(result);
+        else
+            onFinished.Invoke(texture);
+
         progressText.Invoke($"Masking '{this.fileName}'.. Complete!", Color.white);
         Debug.Log($"<color=cyan>Loaded Masking '{this.fileName}'</color>");
+    }
+
+    /// <summary>
+    /// 읽기 속도
+    /// </summary>
+    /// <returns></returns>
+    private float GetWriteSpeed()
+    {
+        float speed = 0.1f;
+        switch (runTimeWriteSpeed)
+        {
+            case WriteSpeed.Slow:
+                speed = Time.deltaTime * 0.2f;
+                break;
+            case WriteSpeed.Default:
+                speed = Time.deltaTime * 0.5f;
+                break;
+            case WriteSpeed.Fast:
+                speed = Time.deltaTime;
+                break;
+            default:
+                break;
+        }
+        return speed;
     }
 }

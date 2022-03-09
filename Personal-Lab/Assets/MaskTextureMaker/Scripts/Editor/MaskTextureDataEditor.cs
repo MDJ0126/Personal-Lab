@@ -41,10 +41,18 @@ public class MaskTextureDataEditor : Editor
             var mask = _maskTextureData.maskTexture;
 
             Rect outerRect = r;
-            outerRect.width = mask.width;
-            outerRect.height = mask.height;
+            if (mask != null)
+            {
+                outerRect.width = mask.width;
+                outerRect.height = mask.height;
+            }
+            else
+            {
+                outerRect.width = texture.width;
+                outerRect.height = texture.height;
+            }
 
-            if (mask.width > 0)
+            if (outerRect.width > 0)
             {
                 float f = r.width / outerRect.width;
                 outerRect.width *= f;
@@ -68,13 +76,18 @@ public class MaskTextureDataEditor : Editor
 
             GUI.DrawTexture(r, texture, ScaleMode.ScaleToFit);
 
-            // Title label
-            string infoText = "Masked Texture Example";
-            EditorGUI.DropShadowLabel(GUILayoutUtility.GetRect(Screen.width, 18f), infoText);
+            if (mask != null)
+            {
+                // Title label
+                string infoText = "Masked Texture Example";
+                EditorGUI.DropShadowLabel(GUILayoutUtility.GetRect(Screen.width, 18f), infoText);
 
-            // Size label
-            string sizeText = string.Format("Masked Size: {0}x{1}", Mathf.RoundToInt(mask.width), Mathf.RoundToInt(mask.height));
-            EditorGUI.DropShadowLabel(GUILayoutUtility.GetRect(Screen.width, 18f), sizeText);
+                // Size label
+                string sizeText = string.Format("Masked Size: {0}x{1}", Mathf.RoundToInt(mask.width), Mathf.RoundToInt(mask.height));
+                EditorGUI.DropShadowLabel(GUILayoutUtility.GetRect(Screen.width, 18f), sizeText);
+            }
+            else
+                EditorGUI.DropShadowLabel(GUILayoutUtility.GetRect(Screen.width, 18f), "Need mask texture.");
         }
     }
 
