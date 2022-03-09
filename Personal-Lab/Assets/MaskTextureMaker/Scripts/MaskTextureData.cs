@@ -164,7 +164,9 @@ public class MaskTextureData : ScriptableObject
                     yield return WaitForEndOfFrame;
                     time = 0f;
                     startupTime = Time.realtimeSinceStartup;
+#if UNITY_EDITOR
                     progressText.Invoke($"Masking '{name}'.. {((float)i / pixels.Length) * 100f:N0}%", Color.gray);
+#endif
                 }
             }
             result.name = "Masked Texture (Instance)";
@@ -173,9 +175,10 @@ public class MaskTextureData : ScriptableObject
         }
         else
             onFinished.Invoke(texture);
-
+#if UNITY_EDITOR
         progressText.Invoke($"Masking '{name}'.. Complete!", Color.white);
         Debug.Log($"<color=cyan>Loaded Masking '{name}'</color>");
+#endif
     }
 
     /// <summary>

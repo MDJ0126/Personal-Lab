@@ -8,6 +8,8 @@ public class MaskTextureDataEditor : Editor
 
     private Texture2D _previewTexture2D = null;
 
+    private bool IsSingleSelectionObject => Selection.objects.Length == 1;
+
     private void OnEnable()
     {
         _maskTextureData = (MaskTextureData)target;
@@ -24,9 +26,16 @@ public class MaskTextureDataEditor : Editor
 
     public override void OnInspectorGUI()
     {
-        EditorGUI.BeginDisabledGroup(true);
-        EditorGUILayout.ObjectField("MaskTextureData", _maskTextureData, typeof(MaskTextureData), false);
-        EditorGUI.EndDisabledGroup();
+        if (IsSingleSelectionObject)
+        {
+            EditorGUI.BeginDisabledGroup(true);
+            EditorGUILayout.ObjectField("MaskTextureData", _maskTextureData, typeof(MaskTextureData), false);
+            EditorGUI.EndDisabledGroup();
+        }
+        else
+        {
+            EditorGUILayout.LabelField("Multi Data Selected", new GUIStyle("WhiteLabel"));
+        }
 
         base.OnInspectorGUI();
         if (GUI.changed)
@@ -35,7 +44,7 @@ public class MaskTextureDataEditor : Editor
         }
     }
 
-    public override bool HasPreviewGUI() => true;
+    public override bool HasPreviewGUI() => IsSingleSelectionObject;
     public override void OnPreviewGUI(Rect r, GUIStyle background)
     {
         if (_previewTexture2D != null)
@@ -83,14 +92,14 @@ public class MaskTextureDataEditor : Editor
             {
                 // Title label
                 string infoText = "Masked Texture Example";
-                EditorGUI.DropShadowLabel(GUILayoutUtility.GetRect(Screen.width, 18f), infoText);
+                EditorGUI.DropShadowLabel(GUILayoutUtility.GetRect(Screen.width, EditorGUIUtility.singleLineHeight), infoText);
 
                 // Size label
                 string sizeText = string.Format("Masked Size: {0}x{1}", Mathf.RoundToInt(mask.width), Mathf.RoundToInt(mask.height));
-                EditorGUI.DropShadowLabel(GUILayoutUtility.GetRect(Screen.width, 18f), sizeText);
+                EditorGUI.DropShadowLabel(GUILayoutUtility.GetRect(Screen.width, EditorGUIUtility.singleLineHeight), sizeText);
             }
             else
-                EditorGUI.DropShadowLabel(GUILayoutUtility.GetRect(Screen.width, 18f), "Need mask texture.");
+                EditorGUI.DropShadowLabel(GUILayoutUtility.GetRect(Screen.width, EditorGUIUtility.singleLineHeight), "Need mask texture.");
         }
     }
 
