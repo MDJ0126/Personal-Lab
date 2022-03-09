@@ -16,3 +16,4 @@ MonoBehaviour:
   texture: {fileID: 2800000, guid: 712f5a3c4ac50ff40bfed895eebebb3e, type: 3}
   maskTexture: {fileID: 2800000, guid: 8931420567d352946809b8f60f599b66, type: 3}
   coordinate: {x: 115, y: 200}
+  runTimeWriteSpeed: 0

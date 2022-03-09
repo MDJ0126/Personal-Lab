@@ -25,6 +25,10 @@ public class MaskTextureDataEditor : Editor
 
     public override void OnInspectorGUI()
     {
+        EditorGUI.BeginDisabledGroup(true);
+        EditorGUILayout.ObjectField("MaskTextureData", _maskTextureData, typeof(MaskTextureData), false);
+        EditorGUI.EndDisabledGroup();
+
         base.OnInspectorGUI();
         if (GUI.changed)
         {
