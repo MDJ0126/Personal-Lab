@@ -66,20 +66,52 @@ namespace MaskTextureMaker
             SceneManager.sceneLoaded += OnSceneLoaded;
         }
 
+        private void OnDestroy()
+        {
+            SceneManager.sceneLoaded -= OnSceneLoaded;
+        }
+
         private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
         {
             if (mode == LoadSceneMode.Single)
                 MaskTextureData.Release();
         }
 
-        private void OnEnable()
+        private void Update()
         {
-            StartCoroutine("MakePreocesser");
-        }
+            if (messageQueue.Count > 0)
+            {
+                var message = messageQueue.Dequeue();
+                var instanceId = message.maskTextureData.InstanceId;
 
-        private void OnDestroy()
-        {
-            SceneManager.sceneLoaded -= OnSceneLoaded;
+                Texture2D texture2D = null;
+
+                if (MaskTextureData.maskedTextures.TryGetValue(instanceId, out texture2D))
+                {
+                    if (texture2D == null)
+                        MaskTextureData.maskedTextures.Remove(instanceId);
+                }
+
+                if (!MaskTextureData.maskedTextures.TryGetValue(instanceId, out texture2D))
+                {
+                    MaskTextureData.maskedTextures.Add(instanceId, texture2D);
+                    makingList.Add(message);
+                    StartCoroutine(message.maskTextureData.MakeMaskedTextureAsyc((resultTexture) =>
+                    {
+                        makingList.Remove(message);
+                        if (MaskTextureData.maskedTextures.ContainsKey(instanceId))
+                            MaskTextureData.maskedTextures[instanceId] = resultTexture;
+                        message.InvokeOnFinished(resultTexture);
+                    },
+                    (progressText, color) =>
+                    {
+                        this.progressText = progressText;
+                        this.color = color;
+                    }));
+                }
+                else
+                    message.InvokeOnFinished(texture2D);
+            }
         }
 
         /// <summary>
@@ -113,53 +145,6 @@ namespace MaskTextureMaker
             message.maskTextureData = maskTextureData;
             message.onFinished += onFinished;
             messageQueue.Enqueue(message);
-        }
-
-        private WaitForEndOfFrame WaitForEndOfFrame = new WaitForEndOfFrame();
-        /// <summary>
-        /// Make Preocesser Updater
-        /// </summary>
-        /// <returns></returns>
-        private IEnumerator MakePreocesser()
-        {
-            while (true)
-            {
-                if (messageQueue.Count > 0)
-                {
-                    var message = messageQueue.Dequeue();
-                    var name = message.maskTextureData.InstanceId;
-
-                    Texture2D texture2D = null;
-
-                    if (MaskTextureData.maskedTextures.TryGetValue(name, out texture2D))
-                    {
-                        if (texture2D == null)
-                            MaskTextureData.maskedTextures.Remove(name);
-                    }
-
-                    if (!MaskTextureData.maskedTextures.TryGetValue(name, out texture2D))
-                    {
-                        makingList.Add(message);
-                        StartCoroutine(message.maskTextureData.MakeMaskedTextureAsyc((resultTexture) =>
-                        {
-                            texture2D = resultTexture;
-                            makingList.Remove(message);
-                            message.InvokeOnFinished(texture2D);
-                        },
-                        (progressText, color) =>
-                        {
-                            this.progressText = progressText;
-                            this.color = color;
-                        }));
-                        MaskTextureData.maskedTextures.Add(name, texture2D);
-                    }
-                    else
-                        message.InvokeOnFinished(texture2D);
-                }
-
-                // Delay
-                yield return WaitForEndOfFrame;
-            }
         }
 
 #if UNITY_EDITOR
