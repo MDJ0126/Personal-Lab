@@ -1,4 +1,5 @@
-﻿using UnityEditor;
+﻿using System;
+using UnityEditor;
 using UnityEngine;
 
 [CustomEditor(typeof(MaskTextureData)), CanEditMultipleObjects]
@@ -14,15 +15,22 @@ public class MaskTextureDataEditor : Editor
     private void OnEnable()
     {
         _maskTextureData = (MaskTextureData)target;
-        SetPreviewTexture();
+        SetPreviewTexture(false);
+        Undo.undoRedoPerformed = UndoRedoPerformed;
     }
 
-    private void SetPreviewTexture()
+    private void UndoRedoPerformed()
+    {
+        SetPreviewTexture(true);
+    }
+
+    private void SetPreviewTexture(bool isRefresh)
     {
         _maskTextureData.RequestMaskTexture((texture2D) =>
         {
             _previewTexture2D = texture2D;
-        });
+            Repaint();
+        }, isRefresh);
     }
 
     public override void OnInspectorGUI()
@@ -41,7 +49,7 @@ public class MaskTextureDataEditor : Editor
         base.OnInspectorGUI();
         if (GUI.changed)
         {
-            SetPreviewTexture();
+            SetPreviewTexture(true);
         }
     }
 

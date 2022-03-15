@@ -18,7 +18,9 @@ public class MaskTextureData : ScriptableObject
 
     public Texture2D texture;
     public Texture2D maskTexture;
-    public Vector2 coordinate;
+    public Vector2 coordinate = Vector2.one;
+    [Range(0.1f, 5f)]
+    public float scale = 1f;
     [SerializeField]
     private WriteSpeed runTimeWriteSpeed = WriteSpeed.Default;
 
@@ -52,10 +54,13 @@ public class MaskTextureData : ScriptableObject
     /// </summary>
     /// <param name="isRefresh">갱신 여부</param>
     /// <returns></returns>
-    public void RequestMaskTexture(Action<Texture2D> onFinished)
+    public void RequestMaskTexture(Action<Texture2D> onFinished, bool isRefresh = false)
     {
         if (texture != null)
         {
+            if (isRefresh)
+                maskedTextures.Remove(InstanceId);
+
             if (Application.isPlaying)
             {
                 MaskTextureMaker.MaskedTextureMaker.Instance.RequestMaskTexture(this, onFinished);
@@ -63,6 +68,7 @@ public class MaskTextureData : ScriptableObject
             else
             {
                 Texture2D texture2D = null;
+
                 if (maskedTextures.TryGetValue(InstanceId, out texture2D))
                 {
                     if (texture2D == null)
@@ -97,8 +103,8 @@ public class MaskTextureData : ScriptableObject
             {
                 int maskX = i % Mathf.RoundToInt(maskTexture.width);
                 int maskY = i / Mathf.RoundToInt(maskTexture.width);
-                int x = Mathf.RoundToInt(coordinate.x) + maskX;
-                int y = Mathf.RoundToInt(coordinate.y) + maskY;
+                int x = (int)((Mathf.RoundToInt(coordinate.x) + maskX) / scale);
+                int y = (int)((Mathf.RoundToInt(coordinate.y) + maskY) / scale);
                 var texturePixel = texture.GetPixel(x, y);
                 var maskPixel = maskTexture.GetPixel(maskX, maskY);
 
@@ -141,8 +147,8 @@ public class MaskTextureData : ScriptableObject
             {
                 int maskX = i % Mathf.RoundToInt(maskTexture.width);
                 int maskY = i / Mathf.RoundToInt(maskTexture.width);
-                int x = Mathf.RoundToInt(coordinate.x) + maskX;
-                int y = Mathf.RoundToInt(coordinate.y) + maskY;
+                int x = (int)((Mathf.RoundToInt(coordinate.x) + maskX) / scale);
+                int y = (int)((Mathf.RoundToInt(coordinate.y) + maskY) / scale);
                 var texturePixel = texture.GetPixel(x, y);
                 var maskPixel = maskTexture.GetPixel(maskX, maskY);
 
