@@ -33,7 +33,7 @@ public class MaskTextureData : ScriptableObject
                         source.height,
                         0,
                         RenderTextureFormat.Default,
-                        RenderTextureReadWrite.Linear);
+                        RenderTextureReadWrite.sRGB);
             Graphics.Blit(source, renderTex);
             RenderTexture previous = RenderTexture.active;
             RenderTexture.active = renderTex;
