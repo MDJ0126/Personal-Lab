@@ -108,11 +108,7 @@ public class MaskTextureData : ScriptableObject
                 var texturePixel = texture.GetPixel(x, y);
                 var maskPixel = maskTexture.GetPixel(maskX, maskY);
 
-                if (texturePixel.a >= 0.5f)
-                {
-                    texturePixel.a = maskPixel.a;
-                }
-                else
+                if (maskPixel.a == 0f)
                     texturePixel.a = 0f;
 
                 result.SetPixel(maskX, maskY, texturePixel);
@@ -152,11 +148,7 @@ public class MaskTextureData : ScriptableObject
                 var texturePixel = texture.GetPixel(x, y);
                 var maskPixel = maskTexture.GetPixel(maskX, maskY);
 
-                if (texturePixel.a >= 0.5f)
-                {
-                    texturePixel.a = maskPixel.a;
-                }
-                else
+                if (maskPixel.a == 0f)
                     texturePixel.a = 0f;
 
                 result.SetPixel(maskX, maskY, texturePixel);
