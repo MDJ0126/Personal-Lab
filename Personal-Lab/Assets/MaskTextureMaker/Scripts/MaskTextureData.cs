@@ -108,13 +108,13 @@ public class MaskTextureData : ScriptableObject
                 var texturePixel = texture.GetPixel(x, y);
                 var maskPixel = maskTexture.GetPixel(maskX, maskY);
 
-                if (texturePixel.a != 0f)
+                if (texturePixel.a >= 0.5f)
                 {
-                    //texturePixel.r += maskPixel.r;
-                    //texturePixel.g += maskPixel.g;
-                    //texturePixel.b += maskPixel.b;
                     texturePixel.a = maskPixel.a;
                 }
+                else
+                    texturePixel.a = 0f;
+
                 result.SetPixel(maskX, maskY, texturePixel);
             }
             result.name = $"Masked {name} Texture (Instance)";
@@ -152,13 +152,13 @@ public class MaskTextureData : ScriptableObject
                 var texturePixel = texture.GetPixel(x, y);
                 var maskPixel = maskTexture.GetPixel(maskX, maskY);
 
-                if (texturePixel.a != 0f)
+                if (texturePixel.a >= 0.5f)
                 {
-                    //texturePixel.r += maskPixel.r;
-                    //texturePixel.g += maskPixel.g;
-                    //texturePixel.b += maskPixel.b;
                     texturePixel.a = maskPixel.a;
                 }
+                else
+                    texturePixel.a = 0f;
+
                 result.SetPixel(maskX, maskY, texturePixel);
 
                 time = Time.realtimeSinceStartup - startupTime;

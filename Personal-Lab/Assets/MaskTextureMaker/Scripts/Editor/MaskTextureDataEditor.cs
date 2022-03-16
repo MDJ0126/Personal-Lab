@@ -15,7 +15,8 @@ public class MaskTextureDataEditor : Editor
     private void OnEnable()
     {
         _maskTextureData = (MaskTextureData)target;
-        SetPreviewTexture(false);
+        //SetPreviewTexture(false);
+        SetPreviewTexture(true);
         Undo.undoRedoPerformed = UndoRedoPerformed;
     }
 
