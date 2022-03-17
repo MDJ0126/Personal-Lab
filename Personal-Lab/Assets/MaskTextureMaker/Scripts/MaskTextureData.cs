@@ -34,7 +34,7 @@ public class MaskTextureData : ScriptableObject
     public FlipMode flipMode = FlipMode.None;
 
     public int InstanceId => GetInstanceID();
-    
+
     private WaitForEndOfFrame WaitForEndOfFrame = new WaitForEndOfFrame();
 
     /// <summary>
@@ -97,7 +97,10 @@ public class MaskTextureData : ScriptableObject
                 {
                     EditorCoroutine.StartCoroutine(MakeMaskedTextureAsyc((resultTexture) =>
                     {
-                        maskedTextures.Add(InstanceId, resultTexture);
+                        if (maskedTextures.ContainsKey(InstanceId))
+                            maskedTextures[InstanceId] = resultTexture;
+                        else
+                            maskedTextures.Add(InstanceId, resultTexture);
                         onFinished?.Invoke(resultTexture);
                     },
                     (progressText, color) =>
@@ -264,7 +267,7 @@ public class MaskTextureData : ScriptableObject
         return $"{name}";
     }
 
-#region ## EditorCoroutine ##
+    #region ## EditorCoroutine ##
     private class EditorCoroutine
     {
 #if UNITY_EDITOR
@@ -301,5 +304,5 @@ public class MaskTextureData : ScriptableObject
         }
 #endif
     }
-#endregion
+    #endregion
 }
