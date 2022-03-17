@@ -12,8 +12,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1fbc8e18f098a07468bba03d0af57357, type: 3}
   m_Name: MaskTextureData 3
   m_EditorClassIdentifier: 
-  fileName: MaskTextureData 3
   texture: {fileID: 2800000, guid: 712f5a3c4ac50ff40bfed895eebebb3e, type: 3}
   maskTexture: {fileID: 2800000, guid: 8931420567d352946809b8f60f599b66, type: 3}
   coordinate: {x: 115, y: 200}
+  scale: 1
   runTimeWriteSpeed: 0
+  flipMode: 0

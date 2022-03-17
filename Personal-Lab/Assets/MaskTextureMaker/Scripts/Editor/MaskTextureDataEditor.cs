@@ -1,20 +1,34 @@
 ﻿using UnityEditor;
 using UnityEngine;
+using static MaskTextureData;
 
 [CustomEditor(typeof(MaskTextureData)), CanEditMultipleObjects]
 public class MaskTextureDataEditor : Editor
 {
-    private MaskTextureData _maskTextureData = null;
+    private MaskTextureData data = null;
 
-    private Texture2D _previewTexture2D = null;
+    private Texture2D previewTexture2D = null;
 
-    private int SelectedObjectCount => Selection.objects.Length;
+    private int SelectedObjectCount => targets.Length;
     private bool IsSingleSelectionObject => SelectedObjectCount == 1;
+
+    SerializedProperty texture;
+    SerializedProperty maskTexture;
+    SerializedProperty coordinate;
+    SerializedProperty scale;
+    SerializedProperty runTimeWriteSpeed;
+    SerializedProperty flipMode;
 
     private void OnEnable()
     {
-        _maskTextureData = (MaskTextureData)target;
-        //SetPreviewTexture(false);
+        data = target as MaskTextureData;
+        texture = serializedObject.FindProperty("texture");
+        maskTexture = serializedObject.FindProperty("maskTexture");
+        coordinate = serializedObject.FindProperty("coordinate");
+        scale = serializedObject.FindProperty("scale");
+        runTimeWriteSpeed = serializedObject.FindProperty("runTimeWriteSpeed");
+        flipMode = serializedObject.FindProperty("flipMode");
+
         SetPreviewTexture(true);
         Undo.undoRedoPerformed = UndoRedoPerformed;
     }
@@ -26,19 +40,25 @@ public class MaskTextureDataEditor : Editor
 
     private void SetPreviewTexture(bool isRefresh)
     {
-        _maskTextureData.RequestMaskTexture((texture2D) =>
+        if (IsSingleSelectionObject)
         {
-            _previewTexture2D = texture2D;
-            Repaint();
-        }, isRefresh);
+            data.RequestMaskTexture((texture2D) =>
+            {
+                previewTexture2D = texture2D;
+                Repaint();
+            }, isRefresh);
+        }
     }
 
     public override void OnInspectorGUI()
     {
+        //base.OnInspectorGUI();
+        serializedObject.Update();
+
         if (IsSingleSelectionObject)
         {
             EditorGUI.BeginDisabledGroup(true);
-            EditorGUILayout.ObjectField("MaskTextureData", _maskTextureData, typeof(MaskTextureData), false);
+            EditorGUILayout.ObjectField("MaskTextureData", data, typeof(MaskTextureData), false);
             EditorGUI.EndDisabledGroup();
         }
         else
@@ -46,61 +66,67 @@ public class MaskTextureDataEditor : Editor
             EditorGUILayout.LabelField($"Multiple data was selected. ({SelectedObjectCount} Datas)", new GUIStyle("WhiteLabel"));
         }
 
-        //base.OnInspectorGUI();
+        EditorGUILayout.BeginVertical("Box");
+        EditorGUILayout.ObjectField(texture, typeof(Texture));
+        EditorGUILayout.ObjectField(maskTexture, typeof(Texture));
 
-        EditorGUILayout.BeginVertical();
-            EditorGUILayout.BeginHorizontal();
-            _maskTextureData.texture = EditorGUILayout.ObjectField("Texture", _maskTextureData.texture, typeof(Texture2D), true) as Texture2D;
-            EditorGUILayout.EndHorizontal();
+        if (texture.objectReferenceValue != null && maskTexture.objectReferenceValue != null)
+        {
+            EditorGUILayout.Space(10f);
 
-            EditorGUILayout.BeginHorizontal();
-            _maskTextureData.maskTexture = EditorGUILayout.ObjectField("Mask Texture", _maskTextureData.maskTexture, typeof(Texture2D), true) as Texture2D;
-            EditorGUILayout.EndHorizontal();
-        EditorGUILayout.EndVertical();
-
-        EditorGUILayout.BeginVertical("HelpBox");
+            EditorGUILayout.BeginVertical("HelpBox");
             EditorGUILayout.BeginHorizontal();
             EditorGUILayout.LabelField("Optional", new GUIStyle("WhiteLabel"));
             EditorGUILayout.EndHorizontal();
 
             EditorGUILayout.BeginHorizontal();
-            _maskTextureData.coordinate = EditorGUILayout.Vector2Field("Coordinate", _maskTextureData.coordinate);
+            EditorGUILayout.PropertyField(coordinate);
             EditorGUILayout.EndHorizontal();
 
             EditorGUILayout.BeginHorizontal();
-            _maskTextureData.scale = EditorGUILayout.Slider("Scale", _maskTextureData.scale, 0.1f, 5f);
+            EditorGUILayout.Slider(scale, 0.1f, 5f);
             EditorGUILayout.EndHorizontal();
 
             EditorGUILayout.BeginHorizontal();
-            EditorGUILayout.PrefixLabel("Flip");
 
-            bool isFlipX = (_maskTextureData.flipMode & MaskTextureData.FlipMode.X) == MaskTextureData.FlipMode.X;
-            isFlipX = EditorGUILayout.Toggle(isFlipX, GUILayout.Width(15f));
-            EditorGUILayout.LabelField("X", GUILayout.Width(20f));
+            if (IsSingleSelectionObject)
+            {
+                EditorGUILayout.PrefixLabel("Flip");
+                bool isFlipX = ((FlipMode)flipMode.intValue & FlipMode.X) == FlipMode.X;
+                isFlipX = EditorGUILayout.Toggle(isFlipX, GUILayout.Width(15f));
+                EditorGUILayout.LabelField("X", GUILayout.Width(20f));
 
-            bool isFlipY = (_maskTextureData.flipMode & MaskTextureData.FlipMode.Y) == MaskTextureData.FlipMode.Y;
-            isFlipY = EditorGUILayout.Toggle(isFlipY, GUILayout.Width(15f));
-            EditorGUILayout.LabelField("Y", GUILayout.Width(20f));
+                bool isFlipY = ((FlipMode)flipMode.intValue & FlipMode.Y) == FlipMode.Y;
+                isFlipY = EditorGUILayout.Toggle(isFlipY, GUILayout.Width(15f));
+                EditorGUILayout.LabelField("Y", GUILayout.Width(20f));
+                if (GUI.changed)
+                {
+                    if (isFlipX)
+                        flipMode.intValue |= (int)FlipMode.X;
+                    else
+                        flipMode.intValue &= ~(int)FlipMode.X;
+
+                    if (isFlipY)
+                        flipMode.intValue |= (int)FlipMode.Y;
+                    else
+                        flipMode.intValue &= ~(int)FlipMode.Y;
+                }
+            }
+            else
+                EditorGUILayout.PropertyField(flipMode, new GUIContent("Flip"));
 
             EditorGUILayout.EndHorizontal();
 
             EditorGUILayout.BeginHorizontal();
-            _maskTextureData.runTimeWriteSpeed = (MaskTextureData.WriteSpeed)EditorGUILayout.EnumPopup("RunTime Write Speed", _maskTextureData.runTimeWriteSpeed);
+            EditorGUILayout.PropertyField(runTimeWriteSpeed, new GUIContent("RunTime Write Speed"));
             EditorGUILayout.EndHorizontal();
+            EditorGUILayout.EndVertical();
+        }
         EditorGUILayout.EndVertical();
 
         if (GUI.changed)
         {
-            if (isFlipX)
-                _maskTextureData.flipMode |= MaskTextureData.FlipMode.X;
-            else
-                _maskTextureData.flipMode &= ~MaskTextureData.FlipMode.X;
-
-            if (isFlipY)
-                _maskTextureData.flipMode |= MaskTextureData.FlipMode.Y;
-            else
-                _maskTextureData.flipMode &= ~MaskTextureData.FlipMode.Y;
-
+            serializedObject.ApplyModifiedProperties();
             SetPreviewTexture(true);
         }
     }
@@ -108,10 +134,10 @@ public class MaskTextureDataEditor : Editor
     public override bool HasPreviewGUI() => IsSingleSelectionObject;
     public override void OnPreviewGUI(Rect r, GUIStyle background)
     {
-        if (_previewTexture2D != null)
+        if (previewTexture2D != null)
         {
-            var texture = _previewTexture2D;
-            var mask = _maskTextureData.maskTexture;
+            var texture = previewTexture2D;
+            var mask = maskTexture.objectReferenceValue as Texture2D;
 
             Rect outerRect = r;
             if (mask != null)

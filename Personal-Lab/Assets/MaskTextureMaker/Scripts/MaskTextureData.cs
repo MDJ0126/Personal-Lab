@@ -25,13 +25,12 @@ public class MaskTextureData : ScriptableObject
         Y = 1 << 1,
     }
 
-    public Texture2D texture;
-    public Texture2D maskTexture;
-    public Vector2 coordinate = Vector2.one;
-    [Range(0.1f, 5f)]
-    public float scale = 1f;
-    public WriteSpeed runTimeWriteSpeed = WriteSpeed.Default;
-    public FlipMode flipMode = FlipMode.None;
+    [SerializeField] private Texture2D texture;
+    [SerializeField] private Texture2D maskTexture;
+    [SerializeField] private Vector2 coordinate = Vector2.one;
+    [SerializeField] private float scale = 1f;
+    [SerializeField] private WriteSpeed runTimeWriteSpeed = WriteSpeed.Default;
+    [SerializeField] private FlipMode flipMode = FlipMode.None;
 
     public int InstanceId => GetInstanceID();
 
