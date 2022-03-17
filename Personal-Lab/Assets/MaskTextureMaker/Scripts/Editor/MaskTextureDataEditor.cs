@@ -1,5 +1,4 @@
-﻿using System;
-using UnityEditor;
+﻿using UnityEditor;
 using UnityEngine;
 
 [CustomEditor(typeof(MaskTextureData)), CanEditMultipleObjects]
@@ -47,9 +46,61 @@ public class MaskTextureDataEditor : Editor
             EditorGUILayout.LabelField($"Multiple data was selected. ({SelectedObjectCount} Datas)", new GUIStyle("WhiteLabel"));
         }
 
-        base.OnInspectorGUI();
+        //base.OnInspectorGUI();
+
+        EditorGUILayout.BeginVertical();
+            EditorGUILayout.BeginHorizontal();
+            _maskTextureData.texture = EditorGUILayout.ObjectField("Texture", _maskTextureData.texture, typeof(Texture2D), true) as Texture2D;
+            EditorGUILayout.EndHorizontal();
+
+            EditorGUILayout.BeginHorizontal();
+            _maskTextureData.maskTexture = EditorGUILayout.ObjectField("Mask Texture", _maskTextureData.maskTexture, typeof(Texture2D), true) as Texture2D;
+            EditorGUILayout.EndHorizontal();
+        EditorGUILayout.EndVertical();
+
+        EditorGUILayout.BeginVertical("HelpBox");
+            EditorGUILayout.BeginHorizontal();
+            EditorGUILayout.LabelField("Optional", new GUIStyle("WhiteLabel"));
+            EditorGUILayout.EndHorizontal();
+
+            EditorGUILayout.BeginHorizontal();
+            _maskTextureData.coordinate = EditorGUILayout.Vector2Field("Coordinate", _maskTextureData.coordinate);
+            EditorGUILayout.EndHorizontal();
+
+            EditorGUILayout.BeginHorizontal();
+            _maskTextureData.scale = EditorGUILayout.Slider("Scale", _maskTextureData.scale, 0.1f, 5f);
+            EditorGUILayout.EndHorizontal();
+
+            EditorGUILayout.BeginHorizontal();
+            EditorGUILayout.PrefixLabel("Flip");
+
+            bool isFlipX = (_maskTextureData.flipMode & MaskTextureData.FlipMode.X) == MaskTextureData.FlipMode.X;
+            isFlipX = EditorGUILayout.Toggle(isFlipX, GUILayout.Width(15f));
+            EditorGUILayout.LabelField("X", GUILayout.Width(20f));
+
+            bool isFlipY = (_maskTextureData.flipMode & MaskTextureData.FlipMode.Y) == MaskTextureData.FlipMode.Y;
+            isFlipY = EditorGUILayout.Toggle(isFlipY, GUILayout.Width(15f));
+            EditorGUILayout.LabelField("Y", GUILayout.Width(20f));
+
+            EditorGUILayout.EndHorizontal();
+
+            EditorGUILayout.BeginHorizontal();
+            _maskTextureData.runTimeWriteSpeed = (MaskTextureData.WriteSpeed)EditorGUILayout.EnumPopup("RunTime Write Speed", _maskTextureData.runTimeWriteSpeed);
+            EditorGUILayout.EndHorizontal();
+        EditorGUILayout.EndVertical();
+
         if (GUI.changed)
         {
+            if (isFlipX)
+                _maskTextureData.flipMode |= MaskTextureData.FlipMode.X;
+            else
+                _maskTextureData.flipMode &= ~MaskTextureData.FlipMode.X;
+
+            if (isFlipY)
+                _maskTextureData.flipMode |= MaskTextureData.FlipMode.Y;
+            else
+                _maskTextureData.flipMode &= ~MaskTextureData.FlipMode.Y;
+
             SetPreviewTexture(true);
         }
     }

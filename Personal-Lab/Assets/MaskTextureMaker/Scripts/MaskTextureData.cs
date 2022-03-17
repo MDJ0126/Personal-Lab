@@ -9,11 +9,19 @@ public class MaskTextureData : ScriptableObject
     public static Dictionary<int, Texture2D> maskedTextures = new Dictionary<int, Texture2D>();
     public static void Release() => maskedTextures.Clear();
 
-    private enum WriteSpeed
+    public enum WriteSpeed
     {
         Slow,
         Default,
         Fast,
+    }
+
+    [Flags]
+    public enum FlipMode
+    {
+        None = 0,
+        X = 1 << 0,
+        Y = 1 << 1,
     }
 
     public Texture2D texture;
@@ -21,11 +29,18 @@ public class MaskTextureData : ScriptableObject
     public Vector2 coordinate = Vector2.one;
     [Range(0.1f, 5f)]
     public float scale = 1f;
-    [SerializeField]
-    private WriteSpeed runTimeWriteSpeed = WriteSpeed.Default;
+    public WriteSpeed runTimeWriteSpeed = WriteSpeed.Default;
+    public FlipMode flipMode = FlipMode.None;
 
     public int InstanceId => GetInstanceID();
+    
+    private WaitForEndOfFrame WaitForEndOfFrame = new WaitForEndOfFrame();
 
+    /// <summary>
+    /// 읽기 가능한 임시 텍스쳐 생성
+    /// </summary>
+    /// <param name="source"></param>
+    /// <returns></returns>
     private Texture2D GetReadableTexture2D(Texture2D source)
     {
         if (source != null)
@@ -41,6 +56,7 @@ public class MaskTextureData : ScriptableObject
             RenderTexture.active = renderTex;
             Texture2D readableTexture = new Texture2D(source.width, source.height);
             readableTexture.ReadPixels(new Rect(0, 0, renderTex.width, renderTex.height), 0, 0);
+            readableTexture.wrapMode = source.wrapMode;
             readableTexture.Apply();
             RenderTexture.active = previous;
             RenderTexture.ReleaseTemporary(renderTex);
@@ -77,10 +93,20 @@ public class MaskTextureData : ScriptableObject
 
                 if (!maskedTextures.TryGetValue(InstanceId, out texture2D))
                 {
-                    texture2D = MakeMaskedTexture();
                     maskedTextures.Add(InstanceId, texture2D);
+                    EditorCoroutine.StartCoroutine(MakeMaskedTextureAsyc((resultTexture) =>
+                    {
+                        if (maskedTextures.ContainsKey(InstanceId))
+                            maskedTextures[InstanceId] = resultTexture;
+                        onFinished?.Invoke(resultTexture);
+                    },
+                    (progressText, color) =>
+                    {
+
+                    }));
                 }
-                onFinished?.Invoke(texture2D);
+                else
+                    onFinished?.Invoke(texture2D);
             }
         }
         else
@@ -88,40 +114,59 @@ public class MaskTextureData : ScriptableObject
     }
 
     /// <summary>
-    /// 대상 텍스쳐를 영역만큼 잘라서 반환
+    /// 텍스쳐 뒤집기
     /// </summary>
-    /// <returns>마스킹 적용된 텍스쳐 반환</returns>
-    public Texture2D MakeMaskedTexture()
+    /// <param name="flipMode"></param>
+    /// <param name="source"></param>
+    private IEnumerator FlipTexture2DAsyc(FlipMode flipMode, Texture2D source)
     {
-        var texture = GetReadableTexture2D(this.texture);
-        var maskTexture = GetReadableTexture2D(this.maskTexture);
-        if (maskTexture != null)
+        float roofTime = GetWriteSpeed();
+        float time = 0f;
+        float startupTime = Time.realtimeSinceStartup;
+
+        // 가로로 뒤집기
+        if ((flipMode & FlipMode.X) == FlipMode.X)
         {
-            Texture2D result = new Texture2D(Mathf.RoundToInt(maskTexture.width), Mathf.RoundToInt(maskTexture.height), TextureFormat.RGBA32, 1, false);
-            var pixels = result.GetPixels();
+            var pixels = source.GetPixels();
             for (int i = 0; i < pixels.Length; i++)
             {
-                int maskX = i % Mathf.RoundToInt(maskTexture.width);
-                int maskY = i / Mathf.RoundToInt(maskTexture.width);
-                int x = (int)((Mathf.RoundToInt(coordinate.x) + maskX) / scale);
-                int y = (int)((Mathf.RoundToInt(coordinate.y) + maskY) / scale);
-                var texturePixel = texture.GetPixel(x, y);
-                var maskPixel = maskTexture.GetPixel(maskX, maskY);
+                int x = i % Mathf.RoundToInt(source.width);
+                int y = i / Mathf.RoundToInt(source.width);
+                var flipPixel = pixels[(source.width - x - 1) + (source.width * y)];
+                source.SetPixel(x, y, flipPixel);
 
-                if (maskPixel.a == 0f)
-                    texturePixel.a = 0f;
-
-                result.SetPixel(maskX, maskY, texturePixel);
+                time = Time.realtimeSinceStartup - startupTime;
+                if (roofTime < time)
+                {
+                    yield return WaitForEndOfFrame;
+                    time = 0f;
+                    startupTime = Time.realtimeSinceStartup;
+                }
             }
-            result.name = $"Masked {name} Texture (Instance)";
-            result.Apply();
-
-            return result;
         }
-        return texture;
+
+        // 세로로 뒤집기
+        if ((flipMode & FlipMode.Y) == FlipMode.Y)
+        {
+            var pixels = source.GetPixels();
+            for (int i = 0; i < pixels.Length; i++)
+            {
+                int x = i % Mathf.RoundToInt(source.width);
+                int y = i / Mathf.RoundToInt(source.width);
+                var flipPixel = pixels[x + (source.width * (source.height - y - 1))];
+                source.SetPixel(x, y, flipPixel);
+
+                time = Time.realtimeSinceStartup - startupTime;
+                if (roofTime < time)
+                {
+                    yield return WaitForEndOfFrame;
+                    time = 0f;
+                    startupTime = Time.realtimeSinceStartup;
+                }
+            }
+        }
     }
 
-    private WaitForEndOfFrame WaitForEndOfFrame = new WaitForEndOfFrame();
     /// <summary>
     /// 대상 텍스쳐를 영역만큼 잘라서 반환
     /// </summary>
@@ -133,6 +178,8 @@ public class MaskTextureData : ScriptableObject
 
         if (maskTexture != null)
         {
+            yield return FlipTexture2DAsyc(flipMode, texture);
+
             Texture2D result = new Texture2D(Mathf.RoundToInt(maskTexture.width), Mathf.RoundToInt(maskTexture.height), TextureFormat.RGBA32, 1, false);
             var pixels = result.GetPixels();
 
@@ -172,7 +219,8 @@ public class MaskTextureData : ScriptableObject
             onFinished.Invoke(texture);
 #if UNITY_EDITOR
         progressText.Invoke($"Masking '{name}'.. Complete!", Color.white);
-        Debug.Log($"<color=cyan>Loaded Masking '{name}'</color>");
+        if (Application.isPlaying)
+            Debug.Log($"<color=cyan>Loaded Masking '{name}'</color>");
 #endif
     }
 
@@ -204,4 +252,53 @@ public class MaskTextureData : ScriptableObject
     {
         return $"{name}";
     }
+
+    #region ## EditorCoroutine ##
+    private class EditorCoroutine
+    {
+        public static EditorCoroutine StartCoroutine(IEnumerator _routine)
+        {
+#if UNITY_EDITOR
+            EditorCoroutine coroutine = new EditorCoroutine(_routine);
+            coroutine.start();
+            return coroutine;
+#else
+            return null;
+#endif
+        }
+
+        readonly IEnumerator routine;
+        EditorCoroutine(IEnumerator _routine)
+        {
+            routine = _routine;
+        }
+
+        void start()
+        {
+#if UNITY_EDITOR
+            UnityEditor.EditorApplication.update += update;
+#endif
+        }
+        public void stop()
+        {
+#if UNITY_EDITOR
+            UnityEditor.EditorApplication.update -= update;
+#endif
+        }
+
+        void update()
+        {
+            /* NOTE: no need to try/catch MoveNext,
+                * if an IEnumerator throws its next iteration returns false.
+                * Also, Unity probably catches when calling EditorApplication.update.
+                */
+
+            //Debug.Log("update");
+            if (!routine.MoveNext())
+            {
+                stop();
+            }
+        }
+    }
+#endregion
 }

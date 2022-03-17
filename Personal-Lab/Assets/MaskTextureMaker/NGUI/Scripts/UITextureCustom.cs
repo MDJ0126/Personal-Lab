@@ -14,13 +14,17 @@ public class UITextureCustom : UITexture
         }
         set
         {
-            mTextureObject = value;
-            if (mTextureObject != null)
+            if (!mTextureObject.Equals(value))
             {
-                value.RequestMaskTexture((texture2D) =>
+                mTextureObject = value;
+                if (mTextureObject != null)
                 {
-                    mainTexture = texture2D;
-                });
+                    mainTexture = null;
+                    value.RequestMaskTexture((texture2D) =>
+                    {
+                        mainTexture = texture2D;
+                    });
+                }
             }
         }
     }
