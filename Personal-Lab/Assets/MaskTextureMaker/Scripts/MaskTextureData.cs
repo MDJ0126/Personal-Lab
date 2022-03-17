@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 [CreateAssetMenu(fileName = "Masked Texture", menuName = "ScriptableObjects/Masked Texture")]
 public class MaskTextureData : ScriptableObject
@@ -83,6 +84,7 @@ public class MaskTextureData : ScriptableObject
             }
             else
             {
+#if UNITY_EDITOR
                 Texture2D texture2D = null;
 
                 if (maskedTextures.TryGetValue(InstanceId, out texture2D))
@@ -93,11 +95,9 @@ public class MaskTextureData : ScriptableObject
 
                 if (!maskedTextures.TryGetValue(InstanceId, out texture2D))
                 {
-                    maskedTextures.Add(InstanceId, texture2D);
                     EditorCoroutine.StartCoroutine(MakeMaskedTextureAsyc((resultTexture) =>
                     {
-                        if (maskedTextures.ContainsKey(InstanceId))
-                            maskedTextures[InstanceId] = resultTexture;
+                        maskedTextures.Add(InstanceId, resultTexture);
                         onFinished?.Invoke(resultTexture);
                     },
                     (progressText, color) =>
@@ -107,6 +107,7 @@ public class MaskTextureData : ScriptableObject
                 }
                 else
                     onFinished?.Invoke(texture2D);
+#endif
             }
         }
         else
@@ -178,8 +179,15 @@ public class MaskTextureData : ScriptableObject
 
         if (maskTexture != null)
         {
+#if UNITY_EDITOR
+            var enumerator = FlipTexture2DAsyc(flipMode, texture);
+            while (enumerator.MoveNext())
+            {
+                //yield return WaitForEndOfFrame;
+            }
+#else
             yield return FlipTexture2DAsyc(flipMode, texture);
-
+#endif
             Texture2D result = new Texture2D(Mathf.RoundToInt(maskTexture.width), Mathf.RoundToInt(maskTexture.height), TextureFormat.RGBA32, 1, false);
             var pixels = result.GetPixels();
 
@@ -230,20 +238,23 @@ public class MaskTextureData : ScriptableObject
     /// <returns></returns>
     private float GetWriteSpeed()
     {
-        float speed = 0.1f;
-        switch (runTimeWriteSpeed)
+        float speed = 1f;
+        if (Application.isPlaying)
         {
-            case WriteSpeed.Slow:
-                speed = Time.deltaTime * 0.2f;
-                break;
-            case WriteSpeed.Default:
-                speed = Time.deltaTime * 0.5f;
-                break;
-            case WriteSpeed.Fast:
-                speed = Time.deltaTime;
-                break;
-            default:
-                break;
+            switch (runTimeWriteSpeed)
+            {
+                case WriteSpeed.Slow:
+                    speed = Time.deltaTime * 0.2f;
+                    break;
+                case WriteSpeed.Default:
+                    speed = Time.deltaTime * 0.5f;
+                    break;
+                case WriteSpeed.Fast:
+                    speed = Time.deltaTime;
+                    break;
+                default:
+                    break;
+            }
         }
         return speed;
     }
@@ -253,52 +264,42 @@ public class MaskTextureData : ScriptableObject
         return $"{name}";
     }
 
-    #region ## EditorCoroutine ##
+#region ## EditorCoroutine ##
     private class EditorCoroutine
     {
+#if UNITY_EDITOR
         public static EditorCoroutine StartCoroutine(IEnumerator _routine)
         {
-#if UNITY_EDITOR
             EditorCoroutine coroutine = new EditorCoroutine(_routine);
-            coroutine.start();
+            coroutine.Start();
             return coroutine;
-#else
-            return null;
-#endif
         }
 
         readonly IEnumerator routine;
-        EditorCoroutine(IEnumerator _routine)
+        private EditorCoroutine(IEnumerator _routine) => routine = _routine;
+
+        private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
         {
-            routine = _routine;
+            if (mode == LoadSceneMode.Single)
+                UnityEditor.EditorApplication.update -= Update;
         }
 
-        void start()
+        private void Start()
         {
-#if UNITY_EDITOR
-            UnityEditor.EditorApplication.update += update;
+            UnityEditor.EditorApplication.update += Update;
+            UnityEngine.SceneManagement.SceneManager.sceneLoaded += OnSceneLoaded;
+        }
+        private void Stop()
+        {
+            UnityEditor.EditorApplication.update -= Update;
+            UnityEngine.SceneManagement.SceneManager.sceneLoaded -= OnSceneLoaded;
+        }
+
+        private void Update()
+        {
+            if (!routine.MoveNext()) Stop();
+        }
 #endif
-        }
-        public void stop()
-        {
-#if UNITY_EDITOR
-            UnityEditor.EditorApplication.update -= update;
-#endif
-        }
-
-        void update()
-        {
-            /* NOTE: no need to try/catch MoveNext,
-                * if an IEnumerator throws its next iteration returns false.
-                * Also, Unity probably catches when calling EditorApplication.update.
-                */
-
-            //Debug.Log("update");
-            if (!routine.MoveNext())
-            {
-                stop();
-            }
-        }
     }
 #endregion
 }
