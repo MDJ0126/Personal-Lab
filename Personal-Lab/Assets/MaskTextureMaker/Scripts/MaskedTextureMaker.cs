@@ -121,6 +121,13 @@ namespace MaskTextureMaker
         /// <param name="onFinished"></param>
         public void RequestMaskTexture(MaskTextureData maskTextureData, Action<Texture2D> onFinished)
         {
+            // 완성된 이미지가 이미 존재하는 경우 바로 넘겨주기
+            if (MaskTextureData.maskedTextures.TryGetValue(maskTextureData.InstanceId, out var texture2D))
+            {
+                onFinished?.Invoke(texture2D);
+                return;
+            }
+
             // 텍스쳐 제작 중에 있는지 체크
             var making = makingList.Find(item => item.maskTextureData.InstanceId == maskTextureData.InstanceId);
             if (making != null)

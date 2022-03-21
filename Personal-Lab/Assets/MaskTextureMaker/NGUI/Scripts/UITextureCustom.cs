@@ -22,7 +22,8 @@ public class UITextureCustom : UITexture
 
             value.RequestMaskTexture((texture2D) =>
             {
-                mainTexture = texture2D;
+                if (mTextureObject.Equals(value))
+                    mainTexture = texture2D;
             });
         }
     }

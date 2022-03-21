@@ -246,13 +246,13 @@ public class MaskTextureData : ScriptableObject
             switch (runTimeWriteSpeed)
             {
                 case WriteSpeed.Slow:
-                    speed = Time.deltaTime * 0.2f;
+                    speed = Time.deltaTime * 0.05f;
                     break;
                 case WriteSpeed.Default:
-                    speed = Time.deltaTime * 0.5f;
+                    speed = Time.deltaTime * 0.1f;
                     break;
                 case WriteSpeed.Fast:
-                    speed = Time.deltaTime;
+                    speed = Time.deltaTime * 0.5f;
                     break;
                 default:
                     break;
