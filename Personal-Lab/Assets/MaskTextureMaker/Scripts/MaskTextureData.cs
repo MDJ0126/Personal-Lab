@@ -191,6 +191,9 @@ public class MaskTextureData : ScriptableObject
             yield return FlipTexture2DAsyc(flipMode, texture);
 #endif
             Texture2D result = new Texture2D(Mathf.RoundToInt(maskTexture.width), Mathf.RoundToInt(maskTexture.height), TextureFormat.RGBA32, 1, false);
+            result.alphaIsTransparency = true;
+            result.wrapMode = texture.wrapMode;
+
             var pixels = result.GetPixels();
 
             float roofTime = GetWriteSpeed();
@@ -206,7 +209,12 @@ public class MaskTextureData : ScriptableObject
                 var maskPixel = maskTexture.GetPixel(maskX, maskY);
 
                 if (maskPixel.a == 0f)
+                {
+                    texturePixel.r = 0f;
+                    texturePixel.g = 0f;
+                    texturePixel.b = 0f;
                     texturePixel.a = 0f;
+                }
 
                 result.SetPixel(maskX, maskY, texturePixel);
 
