@@ -11,7 +11,7 @@ If you are not using NGUI, please delete the 'NGUI' folder.
 
 March 17, 2022
 - Added Texture Flipping
-- GUI improvements
+- MaskTextureData Inspector GUI improvements
 
 March 13, 2022
 - Added Texture Sacling
