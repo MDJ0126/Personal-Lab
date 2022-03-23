@@ -34,6 +34,8 @@ public class MaskTextureData : ScriptableObject
 
     public int InstanceId => GetInstanceID();
 
+    public bool IsAvailable => texture != null && maskTexture != null;
+
     private WaitForEndOfFrame WaitForEndOfFrame = new WaitForEndOfFrame();
 
     /// <summary>
@@ -79,7 +81,7 @@ public class MaskTextureData : ScriptableObject
 
             if (Application.isPlaying)
             {
-                MaskTextureMaker.MaskedTextureMaker.Instance.RequestMaskTexture(this, onFinished);
+                MaskedTextureMaker.Instance.RequestMaskTexture(this, onFinished);
             }
             else
             {
@@ -179,7 +181,7 @@ public class MaskTextureData : ScriptableObject
         var texture = GetReadableTexture2D(this.texture);
         var maskTexture = GetReadableTexture2D(this.maskTexture);
 
-        if (maskTexture != null)
+        if (IsAvailable)
         {
             Texture2D result = new Texture2D(Mathf.RoundToInt(maskTexture.width), Mathf.RoundToInt(maskTexture.height), TextureFormat.RGBA32, 1, false);
             result.wrapMode = texture.wrapMode;
@@ -257,16 +259,22 @@ public class MaskTextureData : ScriptableObject
         float speed = 1f;
         if (Application.isPlaying)
         {
+            var targetFrameRate = Application.targetFrameRate;
+            if (targetFrameRate == -1)  // 설정된 값이 없는 경우 처리
+                targetFrameRate = 30;
+
+            float frameDeltaTime = 1f / targetFrameRate;    // == Time.DeltaTime도 의미가 같으나 이 경우 순간적으로 프레임 드랍이 생기면 값에 문제가 생김
+
             switch (runTimeWriteSpeed)
             {
                 case WriteSpeed.Slow:
-                    speed = Time.deltaTime * 0.05f;
+                    speed = frameDeltaTime * 0.05f;
                     break;
                 case WriteSpeed.Default:
-                    speed = Time.deltaTime * 0.1f;
+                    speed = frameDeltaTime * 0.1f;
                     break;
                 case WriteSpeed.Fast:
-                    speed = Time.deltaTime * 0.5f;
+                    speed = frameDeltaTime * 0.5f;
                     break;
                 default:
                     break;

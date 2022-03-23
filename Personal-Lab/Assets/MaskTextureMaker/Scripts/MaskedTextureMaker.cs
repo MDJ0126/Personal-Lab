@@ -4,243 +4,243 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-namespace MaskTextureMaker
+[AddComponentMenu("ETC/Mask Texture Maker (Helper)")]
+public class MaskedTextureMaker : MonoBehaviour
 {
-    [AddComponentMenu("ETC/Mask Texture Maker (Helper)")]
-    public class MaskedTextureMaker : MonoBehaviour
+    public static bool isOnDebugGUI = false;
+
+    #region Singleton
+
+    private static MaskedTextureMaker instance = null;
+    public static MaskedTextureMaker Instance
     {
-        public static bool isOnDebugGUI = false;
-
-        #region Singleton
-
-        private static MaskedTextureMaker instance = null;
-        public static MaskedTextureMaker Instance
+        get
         {
-            get
+            if (instance == null)
             {
+                instance = FindObjectOfType<MaskedTextureMaker>();
                 if (instance == null)
                 {
+                    Initialize();
                     instance = FindObjectOfType<MaskedTextureMaker>();
-                    if (instance == null)
-                    {
-                        Initialize();
-                        instance = FindObjectOfType<MaskedTextureMaker>();
-                    }
                 }
-                return instance;
             }
+            return instance;
         }
+    }
 
-        public static bool IsLive => instance != null;
+    public static bool IsLive => instance != null;
 
-        #endregion
+    #endregion
 
-        #region Initialize
-        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
-        private static void Initialize()
+    #region Initialize
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+    private static void Initialize()
+    {
+        GameObject go = new GameObject();
+        go.AddComponent<MaskedTextureMaker>();
+        go.name = $"Masked Texture Maker (Instance)";
+        DontDestroyOnLoad(go);
+    }
+    #endregion
+
+    private class Message
+    {
+        public MaskTextureData maskTextureData;
+        public event Action<Texture2D> onFinished;
+        public void InvokeOnFinished(Texture2D texture)
         {
-            GameObject go = new GameObject();
-            go.AddComponent<MaskedTextureMaker>();
-            go.name = $"Masked Texture Maker (Instance)";
-            DontDestroyOnLoad(go);
+            onFinished?.Invoke(texture);
         }
-        #endregion
+    }
 
-        private class Message
+    private Queue<Message> messageQueue = new Queue<Message>();
+    private List<Message> makingList = new List<Message>();
+    private string progressText = string.Empty;
+
+    /// <summary>
+    /// 리소스 폴더 안의 데이터 메모리상에 미리 로드하기 (사전 로딩 시 사용하면 됩니다.)
+    /// </summary>
+    /// <param name="parentsPath">루트 폴더, 공백일 경우 최상단 루트를 의미함</param>
+    /// <param name="onFinished">로드 완료 콜백</param>
+    public static void LoadAll(string parentsPath = "", Action onFinished = null)
+    {
+        var instance = Instance;
+        var maskTextureDatas = Resources.LoadAll<MaskTextureData>(parentsPath);
+        for (int i = 0; i < maskTextureDatas.Length; i++)
         {
-            public MaskTextureData maskTextureData;
-            public event Action<Texture2D> onFinished;
-            public void InvokeOnFinished(Texture2D texture)
+            instance.RequestMaskTexture(maskTextureDatas[i], (texture2D) =>
             {
-                onFinished?.Invoke(texture);
-            }
+                if (i == maskTextureDatas.Length - 1)
+                    onFinished?.Invoke();
+            });
         }
+    }
 
-        private Queue<Message> messageQueue = new Queue<Message>();
-        private List<Message> makingList = new List<Message>();
-        private string progressText = string.Empty;
+    private void Awake()
+    {
+        MaskTextureData.Release();
+        SceneManager.sceneLoaded += OnSceneLoaded;
+    }
 
-        /// <summary>
-        /// 리소스 폴더 안의 데이터 메모리상에 미리 로드하기 (사전 로딩 시 사용하면 됩니다.)
-        /// </summary>
-        /// <param name="parentsPath">루트 폴더, 공백일 경우 최상단 루트를 의미함</param>
-        /// <param name="onFinished">로드 완료 콜백</param>
-        public static void LoadAll(string parentsPath = "", Action onFinished = null)
-        {
-            var instance = Instance;
-            var maskTextureDatas = Resources.LoadAll<MaskTextureData>(parentsPath);
-            for (int i = 0; i < maskTextureDatas.Length; i++)
-            {
-                instance.RequestMaskTexture(maskTextureDatas[i], (texture2D) =>
-                {
-                    if (i == maskTextureDatas.Length - 1)
-                        onFinished?.Invoke();
-                });
-            }
-        }
+    private void OnDestroy()
+    {
+        SceneManager.sceneLoaded -= OnSceneLoaded;
+    }
 
-        private void Awake()
-        {
+    private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+    {
+        if (mode == LoadSceneMode.Single)
             MaskTextureData.Release();
-            SceneManager.sceneLoaded += OnSceneLoaded;
-        }
+    }
 
-        private void OnDestroy()
+    private void Update()
+    {
+        if (messageQueue.Count > 0)
         {
-            SceneManager.sceneLoaded -= OnSceneLoaded;
-        }
+            var message = messageQueue.Dequeue();
+            var instanceId = message.maskTextureData.InstanceId;
 
-        private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
-        {
-            if (mode == LoadSceneMode.Single)
-                MaskTextureData.Release();
-        }
+            Texture2D texture2D = null;
 
-        private void Update()
-        {
-            if (messageQueue.Count > 0)
+            if (MaskTextureData.maskedTextures.TryGetValue(instanceId, out texture2D))
             {
-                var message = messageQueue.Dequeue();
-                var instanceId = message.maskTextureData.InstanceId;
-
-                Texture2D texture2D = null;
-
-                if (MaskTextureData.maskedTextures.TryGetValue(instanceId, out texture2D))
-                {
-                    if (texture2D == null)
-                        MaskTextureData.maskedTextures.Remove(instanceId);
-                }
-
-                if (!MaskTextureData.maskedTextures.TryGetValue(instanceId, out texture2D))
-                {
-                    MaskTextureData.maskedTextures.Add(instanceId, texture2D);
-                    makingList.Add(message);
-                    StartCoroutine(message.maskTextureData.MakeMaskedTextureAsyc((resultTexture) =>
-                    {
-                        makingList.Remove(message);
-                        if (MaskTextureData.maskedTextures.ContainsKey(instanceId))
-                            MaskTextureData.maskedTextures[instanceId] = resultTexture;
-                        message.InvokeOnFinished(resultTexture);
-                    },
-                    (progressText, color) =>
-                    {
-                        this.progressText = progressText;
-                        this.color = color;
-                    }));
-                }
-                else
-                    message.InvokeOnFinished(texture2D);
+                if (texture2D == null)
+                    MaskTextureData.maskedTextures.Remove(instanceId);
             }
-        }
 
-        /// <summary>
-        /// 마스크 이미지 제작 요청하기
-        /// </summary>
-        /// <param name="maskTextureData"></param>
-        /// <param name="onFinished"></param>
-        public void RequestMaskTexture(MaskTextureData maskTextureData, Action<Texture2D> onFinished)
+            if (!MaskTextureData.maskedTextures.TryGetValue(instanceId, out texture2D))
+            {
+                MaskTextureData.maskedTextures.Add(instanceId, texture2D);
+                makingList.Add(message);
+                StartCoroutine(message.maskTextureData.MakeMaskedTextureAsyc((resultTexture) =>
+                {
+                    makingList.Remove(message);
+                    if (MaskTextureData.maskedTextures.ContainsKey(instanceId))
+                        MaskTextureData.maskedTextures[instanceId] = resultTexture;
+                    message.InvokeOnFinished(resultTexture);
+                },
+                (progressText, color) =>
+                {
+                    this.progressText = progressText;
+                    this.color = color;
+                }));
+            }
+            else
+                message.InvokeOnFinished(texture2D);
+        }
+    }
+
+    /// <summary>
+    /// 마스크 이미지 제작 요청하기
+    /// </summary>
+    /// <param name="maskTextureData"></param>
+    /// <param name="onFinished"></param>
+    public void RequestMaskTexture(MaskTextureData maskTextureData, Action<Texture2D> onFinished)
+    {
+        // 완성된 이미지가 이미 존재하는 경우 바로 넘겨주기
+        if (MaskTextureData.maskedTextures.TryGetValue(maskTextureData.InstanceId, out var texture2D))
         {
-            // 완성된 이미지가 이미 존재하는 경우 바로 넘겨주기
-            if (MaskTextureData.maskedTextures.TryGetValue(maskTextureData.InstanceId, out var texture2D))
+            if (texture2D != null)
             {
                 onFinished?.Invoke(texture2D);
                 return;
             }
+        }
 
-            // 텍스쳐 제작 중에 있는지 체크
-            var making = makingList.Find(item => item.maskTextureData.InstanceId == maskTextureData.InstanceId);
-            if (making != null)
+        // 텍스쳐 제작 중에 있는지 체크
+        var making = makingList.Find(item => item.maskTextureData.InstanceId == maskTextureData.InstanceId);
+        if (making != null)
+        {
+            making.onFinished += onFinished;
+            return;
+        }
+
+        // 이미 이미지 요청을 한 경우에는 이벤트 구독만 추가해준다.
+        var enumerator = messageQueue.GetEnumerator();
+        while (enumerator.MoveNext())
+        {
+            if (enumerator.Current.maskTextureData.InstanceId == maskTextureData.InstanceId)
             {
-                making.onFinished += onFinished;
+                enumerator.Current.onFinished += onFinished;
                 return;
             }
-
-            // 이미 이미지 요청을 한 경우에는 이벤트 구독만 추가해준다.
-            var enumerator = messageQueue.GetEnumerator();
-            while (enumerator.MoveNext())
-            {
-                if (enumerator.Current.maskTextureData.InstanceId == maskTextureData.InstanceId)
-                {
-                    enumerator.Current.onFinished += onFinished;
-                    return;
-                }
-            }
-
-            // 마스크 이미지 제작 요청
-            Message message = new Message();
-            message.maskTextureData = maskTextureData;
-            message.onFinished += onFinished;
-            messageQueue.Enqueue(message);
         }
+
+        // 마스크 이미지 제작 요청
+        Message message = new Message();
+        message.maskTextureData = maskTextureData;
+        message.onFinished += onFinished;
+        messageQueue.Enqueue(message);
+    }
 
 #if UNITY_EDITOR
-        private Color color = Color.white;
+    private Color color = Color.white;
 
-        private void OnGUI()
+    private void OnGUI()
+    {
+        if (isOnDebugGUI)
         {
-            if (isOnDebugGUI)
-            {
-                GUIStyle style = new GUIStyle();
-                style.fontStyle = FontStyle.Bold;
-                style.fontSize = 14;
-                DrawTextWithOutline(new Rect(10, 10, 300, 100), progressText, style, Color.black, color, 0.5f);
-            }
+            GUIStyle style = new GUIStyle();
+            style.fontStyle = FontStyle.Bold;
+            style.fontSize = 14;
+            DrawTextWithOutline(new Rect(10, 10, 300, 100), progressText, style, Color.black, color, 0.5f);
         }
-
-        /// <summary>
-        /// Outline GUI Label
-        /// https://answers.unity.com/questions/160285/text-with-outline.html
-        /// </summary>
-        /// <param name="centerRect"></param>
-        /// <param name="text"></param>
-        /// <param name="style"></param>
-        /// <param name="borderColor"></param>
-        /// <param name="innerColor"></param>
-        /// <param name="borderWidth"></param>
-        private void DrawTextWithOutline(Rect centerRect, string text, GUIStyle style, Color borderColor, Color innerColor, float borderWidth)
-        {
-            // assign the border color
-            style.normal.textColor = borderColor;
-
-            // draw an outline color copy to the left and up from original
-            Rect modRect = centerRect;
-            modRect.x -= borderWidth;
-            modRect.y -= borderWidth;
-            GUI.Label(modRect, text, style);
-
-
-            // stamp copies from the top left corner to the top right corner
-            while (modRect.x <= centerRect.x + borderWidth)
-            {
-                modRect.x++;
-                GUI.Label(modRect, text, style);
-            }
-
-            // stamp copies from the top right corner to the bottom right corner
-            while (modRect.y <= centerRect.y + borderWidth)
-            {
-                modRect.y++;
-                GUI.Label(modRect, text, style);
-            }
-
-            // stamp copies from the bottom right corner to the bottom left corner
-            while (modRect.x >= centerRect.x - borderWidth)
-            {
-                modRect.x--;
-                GUI.Label(modRect, text, style);
-            }
-
-            // stamp copies from the bottom left corner to the top left corner
-            while (modRect.y >= centerRect.y - borderWidth)
-            {
-                modRect.y--;
-                GUI.Label(modRect, text, style);
-            }
-
-            // draw the inner color version in the center
-            style.normal.textColor = innerColor;
-            GUI.Label(centerRect, text, style);
-        }
-#endif
     }
+
+    /// <summary>
+    /// Outline GUI Label
+    /// https://answers.unity.com/questions/160285/text-with-outline.html
+    /// </summary>
+    /// <param name="centerRect"></param>
+    /// <param name="text"></param>
+    /// <param name="style"></param>
+    /// <param name="borderColor"></param>
+    /// <param name="innerColor"></param>
+    /// <param name="borderWidth"></param>
+    private void DrawTextWithOutline(Rect centerRect, string text, GUIStyle style, Color borderColor, Color innerColor, float borderWidth)
+    {
+        // assign the border color
+        style.normal.textColor = borderColor;
+
+        // draw an outline color copy to the left and up from original
+        Rect modRect = centerRect;
+        modRect.x -= borderWidth;
+        modRect.y -= borderWidth;
+        GUI.Label(modRect, text, style);
+
+
+        // stamp copies from the top left corner to the top right corner
+        while (modRect.x <= centerRect.x + borderWidth)
+        {
+            modRect.x++;
+            GUI.Label(modRect, text, style);
+        }
+
+        // stamp copies from the top right corner to the bottom right corner
+        while (modRect.y <= centerRect.y + borderWidth)
+        {
+            modRect.y++;
+            GUI.Label(modRect, text, style);
+        }
+
+        // stamp copies from the bottom right corner to the bottom left corner
+        while (modRect.x >= centerRect.x - borderWidth)
+        {
+            modRect.x--;
+            GUI.Label(modRect, text, style);
+        }
+
+        // stamp copies from the bottom left corner to the top left corner
+        while (modRect.y >= centerRect.y - borderWidth)
+        {
+            modRect.y--;
+            GUI.Label(modRect, text, style);
+        }
+
+        // draw the inner color version in the center
+        style.normal.textColor = innerColor;
+        GUI.Label(centerRect, text, style);
+    }
+#endif
 }

@@ -50,27 +50,39 @@ public class MaskedTextureMakerEditor : Editor
                     var instanceId = enumerator.Current.Key;
                     var texture2D = enumerator.Current.Value;
                     EditorGUILayout.BeginHorizontal("HelpBox");
-                    if (texture2D != null)
+
+                    string path = AssetDatabase.GetAssetPath(instanceId);
+                    var maskTextureData = AssetDatabase.LoadAssetAtPath<MaskTextureData>(path);
+                    bool isButtonClick = false;
+                    if (maskTextureData != null)
                     {
-                        long memory = Profiler.GetRuntimeMemorySizeLong(texture2D);
-                        totalMemoryUsage += memory;
-                        string path = AssetDatabase.GetAssetPath(instanceId);
-                        var maskTextureData = AssetDatabase.LoadAssetAtPath<MaskTextureData>(path);
-                        if (maskTextureData != null)
+                        if (maskTextureData.IsAvailable)
                         {
-                            bool isButtonClick = GUILayout.Button($"{index}. {maskTextureData.name} ({GetMemoryString(memory)})", GUILayout.Width(EditorGUIUtility.currentViewWidth * 0.4f));
-                            if (isButtonClick)
+                            if (texture2D != null)
                             {
-                                MaskTextureDataEditor.previousSelection = target;
-                                Selection.activeObject = maskTextureData;
+                                long memory = Profiler.GetRuntimeMemorySizeLong(texture2D);
+                                totalMemoryUsage += memory;
+                                isButtonClick = GUILayout.Button($"{index}. {maskTextureData.name} ({GetMemoryString(memory)})", GUILayout.Width(EditorGUIUtility.currentViewWidth * 0.4f));
+                            }
+                            else
+                            {
+                                EditorGUI.BeginDisabledGroup(true);
+                                isButtonClick = GUILayout.Button($"{index}. {maskTextureData.name} Loading...", GUILayout.Width(EditorGUIUtility.currentViewWidth * 0.4f));
+                                EditorGUI.EndDisabledGroup();
                             }
                         }
+                        else
+                        {
+                            GUI.backgroundColor = Color.red;
+                            isButtonClick = GUILayout.Button($"{index}. {maskTextureData.name} (Could not load)", GUILayout.Width(EditorGUIUtility.currentViewWidth * 0.4f));
+                            GUI.backgroundColor = Color.white;
+                        }
                     }
-                    else
+
+                    if (isButtonClick)
                     {
-                        EditorGUI.BeginDisabledGroup(true);
-                        GUILayout.Button("Loading...", GUILayout.Width(EditorGUIUtility.currentViewWidth * 0.4f));
-                        EditorGUI.EndDisabledGroup();
+                        MaskTextureDataEditor.previousSelection = target;
+                        Selection.activeObject = maskTextureData;
                     }
 
                     EditorGUI.BeginDisabledGroup(true);
