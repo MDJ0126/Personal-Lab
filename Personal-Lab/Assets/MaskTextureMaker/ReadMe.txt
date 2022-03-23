@@ -9,9 +9,12 @@ Thank you for Using this Package!
 
 If you are not using NGUI, please delete the 'NGUI' folder.
 
+March 22, 2022
+- Added MaskTextureMaker debugging function.
+
 March 17, 2022
-- Added Texture Flipping
-- MaskTextureData Inspector GUI improvements
+- Added texture flipping.
+- MaskTextureData inspector GUI improvements.
 
 March 13, 2022
-- Added Texture Sacling
+- Added texture sacling.

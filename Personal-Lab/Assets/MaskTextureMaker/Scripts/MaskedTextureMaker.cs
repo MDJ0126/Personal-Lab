@@ -6,6 +6,7 @@ using UnityEngine.SceneManagement;
 
 namespace MaskTextureMaker
 {
+    [AddComponentMenu("ETC/Mask Texture Maker (Helper)")]
     public class MaskedTextureMaker : MonoBehaviour
     {
         public static bool isOnDebugGUI = false;

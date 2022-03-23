@@ -181,21 +181,27 @@ public class MaskTextureData : ScriptableObject
 
         if (maskTexture != null)
         {
-#if UNITY_EDITOR
-            var enumerator = FlipTexture2DAsyc(flipMode, texture);
-            while (enumerator.MoveNext())
-            {
-                //yield return WaitForEndOfFrame;
-            }
-#else
-            yield return FlipTexture2DAsyc(flipMode, texture);
-#endif
             Texture2D result = new Texture2D(Mathf.RoundToInt(maskTexture.width), Mathf.RoundToInt(maskTexture.height), TextureFormat.RGBA32, 1, false);
-            result.alphaIsTransparency = true;
             result.wrapMode = texture.wrapMode;
 
-            var pixels = result.GetPixels();
+#if UNITY_EDITOR
+            result.alphaIsTransparency = true;
+#endif
 
+            if (Application.isPlaying)
+            {
+                yield return FlipTexture2DAsyc(flipMode, texture);
+            }
+            else
+            {
+                var enumerator = FlipTexture2DAsyc(flipMode, texture);
+                while (enumerator.MoveNext())
+                {
+                    //yield return WaitForEndOfFrame;
+                }
+            }
+
+            var pixels = result.GetPixels();
             float roofTime = GetWriteSpeed();
             float time = 0f;
             float startupTime = Time.realtimeSinceStartup;

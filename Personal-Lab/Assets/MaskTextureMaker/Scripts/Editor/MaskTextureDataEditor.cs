@@ -19,6 +19,8 @@ public class MaskTextureDataEditor : Editor
     SerializedProperty runTimeWriteSpeed;
     SerializedProperty flipMode;
 
+    public static Object previousSelection = null;
+
     private void OnEnable()
     {
         data = target as MaskTextureData;
@@ -29,19 +31,20 @@ public class MaskTextureDataEditor : Editor
         runTimeWriteSpeed = serializedObject.FindProperty("runTimeWriteSpeed");
         flipMode = serializedObject.FindProperty("flipMode");
 
-        SetPreviewTexture(true);
+        SetPreviewTexture();
         Undo.undoRedoPerformed = UndoRedoPerformed;
     }
 
     private void UndoRedoPerformed()
     {
-        SetPreviewTexture(true);
+        SetPreviewTexture();
     }
 
-    private void SetPreviewTexture(bool isRefresh)
+    private void SetPreviewTexture()
     {
         if (IsSingleSelectionObject)
         {
+            bool isRefresh = !Application.isPlaying;
             data.RequestMaskTexture((texture2D) =>
             {
                 previewTexture2D = texture2D;
@@ -124,10 +127,31 @@ public class MaskTextureDataEditor : Editor
         }
         EditorGUILayout.EndVertical();
 
+        // Undo
+        if (previousSelection != null)
+        {
+            EditorGUILayout.Space(3f);
+            GUI.backgroundColor = Color.green;
+            if (GUILayout.Button($"<< Return to '{previousSelection.name}'"))
+            {
+                GameObject go = previousSelection as GameObject;
+                if (go != null)
+                {
+                    Selection.activeGameObject = go;
+                }
+                else
+                {
+                    Selection.activeObject = previousSelection;
+                }
+                previousSelection = null;
+            }
+            GUI.backgroundColor = Color.white;
+        }
+
         if (GUI.changed)
         {
             serializedObject.ApplyModifiedProperties();
-            SetPreviewTexture(true);
+            SetPreviewTexture();
         }
     }
 

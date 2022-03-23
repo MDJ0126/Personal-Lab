@@ -7,10 +7,11 @@ using UnityEngine.Profiling;
 [CustomEditor(typeof(MaskedTextureMaker))]
 public class MaskedTextureMakerEditor : Editor
 {
-    GUIStyle boldStyle = new GUIStyle("WhiteLabel");
+    private GUIStyle boldStyle;
 
     private void OnEnable()
     {
+        boldStyle = new GUIStyle("WhiteLabel");
         boldStyle.fontStyle = FontStyle.Bold;
         EditorApplication.update += OnUpdate;
     }
@@ -25,7 +26,7 @@ public class MaskedTextureMakerEditor : Editor
         Repaint();
     }
 
-    private long totalMemory = 0;
+    private long totalMemoryUsage = 0;
     public override void OnInspectorGUI()
     {
         //base.OnInspectorGUI();
@@ -35,34 +36,49 @@ public class MaskedTextureMakerEditor : Editor
 
             if (loadedDatas.Count > 0)
             {
-                EditorGUILayout.LabelField($"Total Memory: {GetMemoryString(totalMemory)}", boldStyle);
                 EditorGUILayout.Space();
+                EditorGUILayout.LabelField($"Memory Usage: {GetMemoryString(totalMemoryUsage)}", boldStyle);
 
                 EditorGUILayout.BeginVertical("Box");
                 EditorGUILayout.LabelField($"Loaded Mask Texture2D List (Count: {loadedDatas.Count})");
 
-                totalMemory = 0;
+                totalMemoryUsage = 0;
                 int index = 1;
                 var enumerator = loadedDatas.GetEnumerator();
                 while (enumerator.MoveNext())
                 {
                     var instanceId = enumerator.Current.Key;
                     var texture2D = enumerator.Current.Value;
+                    EditorGUILayout.BeginHorizontal("HelpBox");
                     if (texture2D != null)
                     {
                         long memory = Profiler.GetRuntimeMemorySizeLong(texture2D);
-                        totalMemory += memory;
-                        EditorGUILayout.BeginHorizontal("HelpBox");
+                        totalMemoryUsage += memory;
                         string path = AssetDatabase.GetAssetPath(instanceId);
                         var maskTextureData = AssetDatabase.LoadAssetAtPath<MaskTextureData>(path);
                         if (maskTextureData != null)
                         {
-                            EditorGUILayout.PrefixLabel($"{index}. {maskTextureData.name} ({GetMemoryString(memory)})");
-                            EditorGUILayout.ObjectField(texture2D, typeof(Texture2D), false);
-                            EditorGUILayout.EndHorizontal();
-                            ++index;
+                            bool isButtonClick = GUILayout.Button($"{index}. {maskTextureData.name} ({GetMemoryString(memory)})", GUILayout.Width(EditorGUIUtility.currentViewWidth * 0.4f));
+                            if (isButtonClick)
+                            {
+                                MaskTextureDataEditor.previousSelection = target;
+                                Selection.activeObject = maskTextureData;
+                            }
                         }
                     }
+                    else
+                    {
+                        EditorGUI.BeginDisabledGroup(true);
+                        GUILayout.Button("Loading...", GUILayout.Width(EditorGUIUtility.currentViewWidth * 0.4f));
+                        EditorGUI.EndDisabledGroup();
+                    }
+
+                    EditorGUI.BeginDisabledGroup(true);
+                    EditorGUILayout.ObjectField(texture2D, typeof(Texture2D), false, GUILayout.Width(EditorGUIUtility.currentViewWidth * 0.5f));
+                    EditorGUI.EndDisabledGroup();
+
+                    ++index;
+                    EditorGUILayout.EndHorizontal();
                 }
                 EditorGUILayout.EndVertical();
             }
