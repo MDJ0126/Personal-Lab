@@ -67,11 +67,13 @@ public class MaskedTextureMaker : MonoBehaviour
     {
         var instance = Instance;
         var maskTextureDatas = Resources.LoadAll<MaskTextureData>(parentsPath);
+        var loadCompleteCnt = 0;
         for (int i = 0; i < maskTextureDatas.Length; i++)
         {
             instance.RequestMaskTexture(maskTextureDatas[i], (texture2D) =>
             {
-                if (i == maskTextureDatas.Length - 1)
+                ++loadCompleteCnt;
+                if (loadCompleteCnt == maskTextureDatas.Length)
                     onFinished?.Invoke();
             });
         }
