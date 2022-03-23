@@ -185,9 +185,8 @@ public class MaskTextureData : ScriptableObject
             result.wrapMode = texture.wrapMode;
 
 #if UNITY_EDITOR
-            result.alphaIsTransparency = true;
+            result.alphaIsTransparency = true;  // 에디터에서만 사용 가능한 코드 (디버깅을 위해 강제 처리)
 #endif
-
             if (Application.isPlaying)
             {
                 yield return FlipTexture2DAsyc(flipMode, texture);
@@ -216,13 +215,14 @@ public class MaskTextureData : ScriptableObject
 
                 if (maskPixel.a == 0f)
                 {
-                    texturePixel.r = 0f;
-                    texturePixel.g = 0f;
-                    texturePixel.b = 0f;
-                    texturePixel.a = 0f;
+                    // 마스크 픽셀이 투명하면 투명하게 적용
+                    result.SetPixel(maskX, maskY, Color.clear);
                 }
-
-                result.SetPixel(maskX, maskY, texturePixel);
+                else
+                {
+                    // 마스크 픽셀이 투명하지 않으면 원색으로 적용
+                    result.SetPixel(maskX, maskY, texturePixel);
+                }
 
                 time = Time.realtimeSinceStartup - startupTime;
                 if (roofTime < time)

@@ -4,9 +4,11 @@
 [AddComponentMenu("NGUI/UI/Texture Custom")]
 public class UITextureCustom : UITexture
 {
-	[HideInInspector] [SerializeField] Object mTextureObject = null;
+    private static Texture2D clearTexture = null;
 
-	public MaskTextureData maskTextureScriptableObject
+    [HideInInspector] [SerializeField] Object mTextureObject = null;
+
+    public MaskTextureData maskTextureScriptableObject
     {
         get
         {
@@ -17,7 +19,7 @@ public class UITextureCustom : UITexture
             if (!mTextureObject.Equals(value))
             {
                 mTextureObject = value;
-                mainTexture = null;
+                mainTexture = GetClearTexture();
             }
 
             value.RequestMaskTexture((texture2D) =>
@@ -31,7 +33,7 @@ public class UITextureCustom : UITexture
     protected override void OnStart()
     {
         base.OnStart();
-        mainTexture = null;
+        mainTexture = GetClearTexture();
         if (maskTextureScriptableObject != null)
         {
             maskTextureScriptableObject.RequestMaskTexture((texture2D) =>
@@ -39,5 +41,22 @@ public class UITextureCustom : UITexture
                 mainTexture = texture2D;
             });
         }
+    }
+
+    private Texture2D GetClearTexture()
+    {
+        if (clearTexture == null)
+        {
+            clearTexture = new Texture2D(2, 2);
+            var pixels = clearTexture.GetPixels();
+            for (int i = 0; i < pixels.Length; i++)
+            {
+                int x = i % Mathf.RoundToInt(clearTexture.width);
+                int y = i / Mathf.RoundToInt(clearTexture.width);
+                clearTexture.SetPixel(x, y, Color.clear);
+            }
+            clearTexture.Apply();
+        }
+        return clearTexture;
     }
 }

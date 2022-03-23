@@ -59,7 +59,25 @@ namespace MaskTextureMaker
         private Queue<Message> messageQueue = new Queue<Message>();
         private List<Message> makingList = new List<Message>();
         private string progressText = string.Empty;
-        private Color color = Color.white;
+
+        /// <summary>
+        /// 리소스 폴더 안의 데이터 메모리상에 미리 로드하기 (사전 로딩 시 사용하면 됩니다.)
+        /// </summary>
+        /// <param name="parentsPath">루트 폴더, 공백일 경우 최상단 루트를 의미함</param>
+        /// <param name="onFinished">로드 완료 콜백</param>
+        public static void LoadAll(string parentsPath = "", Action onFinished = null)
+        {
+            var instance = Instance;
+            var maskTextureDatas = Resources.LoadAll<MaskTextureData>(parentsPath);
+            for (int i = 0; i < maskTextureDatas.Length; i++)
+            {
+                instance.RequestMaskTexture(maskTextureDatas[i], (texture2D) =>
+                {
+                    if (i == maskTextureDatas.Length - 1)
+                        onFinished?.Invoke();
+                });
+            }
+        }
 
         private void Awake()
         {
@@ -156,6 +174,7 @@ namespace MaskTextureMaker
         }
 
 #if UNITY_EDITOR
+        private Color color = Color.white;
 
         private void OnGUI()
         {
