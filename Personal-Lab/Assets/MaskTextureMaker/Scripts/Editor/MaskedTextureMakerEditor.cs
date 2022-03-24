@@ -7,12 +7,8 @@ using UnityEngine.Profiling;
 [CustomEditor(typeof(MaskedTextureMaker))]
 public class MaskedTextureMakerEditor : Editor
 {
-    private GUIStyle boldStyle;
-
     private void OnEnable()
     {
-        boldStyle = new GUIStyle("WhiteLabel");
-        boldStyle.fontStyle = FontStyle.Bold;
         EditorApplication.update += OnUpdate;
     }
 
@@ -29,6 +25,8 @@ public class MaskedTextureMakerEditor : Editor
     private long totalMemoryUsage = 0;
     public override void OnInspectorGUI()
     {
+        GUIStyle boldStyle = new GUIStyle("WhiteLabel");
+        boldStyle.fontStyle = FontStyle.Bold;
         //base.OnInspectorGUI();
         var loadedDatas = MaskTextureData.maskedTextures;
         if (loadedDatas != null)
