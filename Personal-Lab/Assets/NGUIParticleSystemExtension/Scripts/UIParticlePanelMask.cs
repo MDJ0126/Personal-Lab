@@ -1,9 +1,9 @@
 ﻿using UnityEngine;
 
 [ExecuteInEditMode]
-[AddComponentMenu("NGUI/UI/Clipping Particle Area")]
+[AddComponentMenu("NGUI/UI/Particle Panel Mask")]
 [RequireComponent(typeof(UIPanel))]
-public class UIClippingParticleArea : MonoBehaviour
+public class UIParticlePanelMask : MonoBehaviour
 {
     private Vector3 mCachedPosition;
     private Vector2 mCachedScale;
@@ -11,23 +11,35 @@ public class UIClippingParticleArea : MonoBehaviour
     private UIPanel mPanel = null;
     [SerializeField] private SpriteMask mSpriteMask = null;
 
-    private void Awake() => mPanel = GetComponent<UIPanel>();
+
+    private void Awake()
+    {
+        mPanel = GetComponent<UIPanel>();
+    }
+
+    private bool IsAvailable => mPanel != null;
 
     private void Start()
     {
-        // 패널 아래 있는 모든 파티클 강제로 마스킹 세팅
-        ChangeAllVisibleInsideMask();
+        if (IsAvailable)
+        {
+            // 패널 아래 있는 모든 파티클 강제로 마스킹 세팅
+            ChangeAllVisibleInsideMask();
+        }
     }
 
     private void Update()
     {
-        // 파티클 영역 오브젝트 생성
-        if (mSpriteMask == null)
-            CreateSpriteMask();
+        if (IsAvailable)
+        {
+            // 파티클 영역 오브젝트 생성
+            if (mSpriteMask == null)
+                CreateSpriteMask();
 
-        // 앵커 변화가 있는 경우 앵커 반영 처리
-        if (IsChangedAnchor())
-            UpdateMaskAnchor();
+            // 앵커 변화가 있는 경우 앵커 반영 처리
+            if (IsChangedAnchor())
+                UpdateMaskAnchor();
+        }
     }
 
     /// <summary>
@@ -36,8 +48,18 @@ public class UIClippingParticleArea : MonoBehaviour
     /// <returns></returns>
     private bool IsChangedAnchor()
     {
-        Vector3 newPosition = new Vector3(mPanel.transform.localPosition.x + mPanel.finalClipRegion.x, mPanel.transform.localPosition.y + mPanel.finalClipRegion.y, 0f);
-        Vector2 newScale = new Vector2(mPanel.baseClipRegion.z, mPanel.baseClipRegion.w);
+        Vector3 newPosition;
+        Vector2 newScale;
+        if (mPanel.clipping == UIDrawCall.Clipping.SoftClip)
+        {
+            newPosition = new Vector3(mPanel.transform.localPosition.x + mPanel.finalClipRegion.x, mPanel.transform.localPosition.y + mPanel.finalClipRegion.y, 0f);
+            newScale = new Vector2(mPanel.baseClipRegion.z, mPanel.baseClipRegion.w);
+        }
+        else
+        {
+            newPosition = Vector3.zero;
+            newScale = new Vector2(Screen.width, Screen.height);
+        }
 
         if (mCachedPosition != newPosition || mCachedScale != newScale)
         {
@@ -77,7 +99,7 @@ public class UIClippingParticleArea : MonoBehaviour
         if (mSpriteMask == null)
         {
             // 오브젝트 생성
-            GameObject go = new GameObject($"Particle Clipping Area (Target : {this.name})");
+            GameObject go = new GameObject($"Particl Clipping Mask (Target : {this.name})");
             go.transform.SetParent(this.transform.parent);
             go.transform.SetSiblingIndex(this.transform.GetSiblingIndex());
             go.layer = mPanel.gameObject.layer;

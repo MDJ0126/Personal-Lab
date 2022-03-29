@@ -176,8 +176,9 @@ public class MaskedTextureMaker : MonoBehaviour
         messageQueue.Enqueue(message);
     }
 
-#if UNITY_EDITOR
     private Color color = Color.white;
+
+#if UNITY_EDITOR
 
     private void OnGUI()
     {

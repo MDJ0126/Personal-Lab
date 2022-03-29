@@ -1,7 +1,7 @@
 ﻿using UnityEditor;
 using UnityEngine;
 
-[CustomEditor(typeof(UIClippingParticleArea))]
+[CustomEditor(typeof(UIParticlePanelMask)), CanEditMultipleObjects]
 public class UIClippingParticleAreaInspector : Editor
 {
     public override void OnInspectorGUI()
@@ -13,7 +13,7 @@ public class UIClippingParticleAreaInspector : Editor
 
         SerializedProperty spriteMask = serializedObject.FindProperty("mSpriteMask");
 
-        EditorGUILayout.LabelField("Clipping Area", boldStyle);
+        EditorGUILayout.LabelField("Particle Clipping Mask", boldStyle);
         EditorGUILayout.BeginHorizontal("HelpBox");
         EditorGUI.BeginDisabledGroup(true);
         EditorGUILayout.ObjectField(spriteMask, new GUIContent(""));
