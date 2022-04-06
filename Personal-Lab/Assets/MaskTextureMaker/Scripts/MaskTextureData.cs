@@ -15,6 +15,7 @@ public class MaskTextureData : ScriptableObject
         Slow,
         Default,
         Fast,
+        Force,
     }
 
     [Flags]
@@ -72,13 +73,28 @@ public class MaskTextureData : ScriptableObject
     /// </summary>
     /// <param name="isRefresh">갱신 여부</param>
     /// <returns></returns>
-    public void RequestMaskTexture(Action<Texture2D> onFinished, bool isRefresh = false)
+    public void RequestMaskTexture(Action<Texture2D> onFinished, bool isRefresh = false, bool isForceLoad = false)
     {
         if (texture != null)
         {
             if (isRefresh)
                 maskedTextures.Remove(InstanceId);
+            if (isForceLoad)
+            {
+                var enumerator = MakeMaskedTextureAsyc((resultTexture) =>
+                {
+                    if (maskedTextures.ContainsKey(InstanceId))
+                        maskedTextures[InstanceId] = resultTexture;
+                    else
+                        maskedTextures.Add(InstanceId, resultTexture);
+                    onFinished?.Invoke(resultTexture);
+                },
+                (progressText, color) =>
+                {
 
+                });
+                while (enumerator.MoveNext()) { }
+            }
             if (Application.isPlaying)
             {
                 MaskedTextureMaker.Instance.RequestMaskTexture(this, onFinished);
@@ -140,12 +156,15 @@ public class MaskTextureData : ScriptableObject
                 var flipPixel = pixels[(source.width - x - 1) + (source.width * y)];
                 source.SetPixel(x, y, flipPixel);
 
-                time = Time.realtimeSinceStartup - startupTime;
-                if (roofTime < time)
+                if (runTimeWriteSpeed != WriteSpeed.Force)
                 {
-                    yield return WaitForEndOfFrame;
-                    time = 0f;
-                    startupTime = Time.realtimeSinceStartup;
+                    time = Time.realtimeSinceStartup - startupTime;
+                    if (roofTime < time)
+                    {
+                        yield return WaitForEndOfFrame;
+                        time = 0f;
+                        startupTime = Time.realtimeSinceStartup;
+                    }
                 }
             }
         }
@@ -161,12 +180,15 @@ public class MaskTextureData : ScriptableObject
                 var flipPixel = pixels[x + (source.width * (source.height - y - 1))];
                 source.SetPixel(x, y, flipPixel);
 
-                time = Time.realtimeSinceStartup - startupTime;
-                if (roofTime < time)
+                if (runTimeWriteSpeed != WriteSpeed.Force)
                 {
-                    yield return WaitForEndOfFrame;
-                    time = 0f;
-                    startupTime = Time.realtimeSinceStartup;
+                    time = Time.realtimeSinceStartup - startupTime;
+                    if (roofTime < time)
+                    {
+                        yield return WaitForEndOfFrame;
+                        time = 0f;
+                        startupTime = Time.realtimeSinceStartup;
+                    }
                 }
             }
         }
@@ -189,17 +211,14 @@ public class MaskTextureData : ScriptableObject
 #if UNITY_EDITOR
             result.alphaIsTransparency = true;  // 에디터에서만 사용 가능한 코드 (디버깅을 위해 강제 처리)
 #endif
-            if (Application.isPlaying)
+            if (Application.isPlaying && runTimeWriteSpeed != WriteSpeed.Force)
             {
                 yield return FlipTexture2DAsyc(flipMode, texture);
             }
             else
             {
                 var enumerator = FlipTexture2DAsyc(flipMode, texture);
-                while (enumerator.MoveNext())
-                {
-                    //yield return WaitForEndOfFrame;
-                }
+                while (enumerator.MoveNext()) { }
             }
 
             var pixels = result.GetPixels();
@@ -226,15 +245,18 @@ public class MaskTextureData : ScriptableObject
                     result.SetPixel(maskX, maskY, texturePixel);
                 }
 
-                time = Time.realtimeSinceStartup - startupTime;
-                if (roofTime < time)
+                if (runTimeWriteSpeed != WriteSpeed.Force)
                 {
-                    yield return WaitForEndOfFrame;
-                    time = 0f;
-                    startupTime = Time.realtimeSinceStartup;
+                    time = Time.realtimeSinceStartup - startupTime;
+                    if (roofTime < time)
+                    {
+                        yield return WaitForEndOfFrame;
+                        time = 0f;
+                        startupTime = Time.realtimeSinceStartup;
 #if UNITY_EDITOR
-                    progressText.Invoke($"Masking '{name}'.. {((float)i / pixels.Length) * 100f:N0}%", Color.gray);
+                        progressText.Invoke($"Masking '{name}'.. {((float)i / pixels.Length) * 100f:N0}%", Color.gray);
 #endif
+                    }
                 }
             }
             result.name = $"Masked {name} Texture (Instance)";
@@ -268,13 +290,16 @@ public class MaskTextureData : ScriptableObject
             switch (runTimeWriteSpeed)
             {
                 case WriteSpeed.Slow:
-                    speed = frameDeltaTime * 0.05f;
-                    break;
-                case WriteSpeed.Default:
                     speed = frameDeltaTime * 0.1f;
                     break;
-                case WriteSpeed.Fast:
+                case WriteSpeed.Default:
                     speed = frameDeltaTime * 0.5f;
+                    break;
+                case WriteSpeed.Fast:
+                    speed = frameDeltaTime * 1f;
+                    break;
+                case WriteSpeed.Force:
+                    //speed = frameDeltaTime * 100000f;
                     break;
                 default:
                     break;

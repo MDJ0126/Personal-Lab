@@ -28,6 +28,11 @@ public class UITextureCustomInspector : UITextureInspector
 		if (target == null) return false;
 
 		SerializedProperty sp = NGUIEditorTools.DrawProperty("Texture", serializedObject, "mTextureObject");
+
+		var forceLoad = serializedObject.FindProperty("mForceLoad");
+		bool beforeForceLoad = forceLoad.boolValue;
+		NGUIEditorTools.DrawProperty("Force Load", forceLoad);
+
 		NGUIEditorTools.DrawProperty("Material", serializedObject, "mMat");
 
 		if (sp != null)

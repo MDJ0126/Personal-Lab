@@ -1,4 +1,4 @@
-----------------------------------------------
+ap----------------------------------------------
             MaskTextureMaker
  Copyright © 2022 Made By. MoonDongjun
             Started 2022.3.9
@@ -8,6 +8,9 @@
 Thank you for Using this Package!
 
 If you are not using NGUI, please delete the 'NGUI' folder.
+
+April 6, 2022
+- Added Force Loading funcion.
 
 March 22, 2022
 - Added MaskTextureMaker debugging function.
