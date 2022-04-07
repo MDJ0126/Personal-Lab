@@ -17,24 +17,27 @@ public class UITextureCustom : UITexture
         }
         set
         {
-            if (!mTextureObject.Equals(value))
+            if (mTextureObject == null || !mTextureObject.Equals(value))
             {
                 mTextureObject = value;
-                mainTexture = GetClearTexture();
+                SetClearTexture();
             }
 
-            value.RequestMaskTexture((texture2D) =>
+            if (value != null)
             {
-                if (mTextureObject.Equals(value))
-                    mainTexture = texture2D;
-            }, isForceLoad: mForceLoad);
+                value.RequestMaskTexture((texture2D) =>
+                {
+                    if (mTextureObject.Equals(value))
+                        mainTexture = texture2D;
+                }, isForceLoad: mForceLoad);
+            }
         }
     }
 
     protected override void OnStart()
     {
         base.OnStart();
-        mainTexture = GetClearTexture();
+        SetClearTexture();
         if (maskTextureScriptableObject != null)
         {
             maskTextureScriptableObject.RequestMaskTexture((texture2D) =>
@@ -42,6 +45,11 @@ public class UITextureCustom : UITexture
                 mainTexture = texture2D;
             });
         }
+    }
+
+    public void SetClearTexture()
+    {
+        mainTexture = GetClearTexture();
     }
 
     private Texture2D GetClearTexture()

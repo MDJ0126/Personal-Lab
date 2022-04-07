@@ -49,6 +49,11 @@ public class UITextureCustomInspector : UITextureInspector
 						NGUISettings.texture = texture2D;
 					});
 				}
+				else
+				{
+					mTexCustom.SetClearTexture();
+					NGUISettings.texture = null;
+				}
 			}
 			else
 				NGUISettings.texture = texture;
