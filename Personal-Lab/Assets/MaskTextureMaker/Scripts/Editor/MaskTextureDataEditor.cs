@@ -49,7 +49,7 @@ public class MaskTextureDataEditor : Editor
             {
                 previewTexture2D = texture2D;
                 Repaint();
-            });
+            }, isRefresh: isRefresh);
         }
     }
 

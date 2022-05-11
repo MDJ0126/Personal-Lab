@@ -87,12 +87,9 @@ public class MaskTextureData : ScriptableObject
             }
         }
 
-        public Texture2D Build()
+        public void Build()
         {
             Array.Copy(resultData, rawData, rawData.Length);
-            texture2D.LoadRawTextureData(resultData);
-            texture2D.Apply();
-            return texture2D;
         }
     }
 
@@ -130,17 +127,17 @@ public class MaskTextureData : ScriptableObject
     /// </summary>
     /// <param name="isRefresh">갱신 여부</param>
     /// <returns></returns>
-    public void RequestMaskTexture(Action<Texture2D> onFinished)
+    public void RequestMaskTexture(Action<Texture2D> onFinished, bool isRefresh = false)
     {
-        if (thread == null)
+        if (makeUpdateThread == null)
         {
-            thread = new Thread(() => MakeUpdater());
-            thread.Start();
+            makeUpdateThread = new Thread(() => MakeUpdater());
+            makeUpdateThread.Start();
         }
 
         if (IsAvailable)
         {
-            if (!maskedTextures.TryGetValue(InstanceId, out var texture2D) || texture2D == null)
+            if (isRefresh || !maskedTextures.TryGetValue(InstanceId, out var texture2D) || texture2D == null)
             {
                 maskedTextures.Remove(InstanceId);
                 if (!maskedTextures.ContainsKey(InstanceId))
@@ -188,10 +185,11 @@ public class MaskTextureData : ScriptableObject
         if (result == null)
         {
             result = new Texture2D(maskTexture.width, maskTexture.height);
-            result.LoadRawTextureData(resultData);
-            result.Apply();
             result.name = this.name;
         }
+
+        result.LoadRawTextureData(resultData);
+        result.Apply();
 
         if (maskedTextures.TryGetValue(InstanceId, out var texture2D))
         {
@@ -238,7 +236,17 @@ public class MaskTextureData : ScriptableObject
         }
     }
 
-    private static Thread thread = null;
+    private static Thread makeUpdateThread = null;
+
+    public static void ReleaseThread()
+    {
+        if (makeUpdateThread != null)
+        {
+            makeUpdateThread.Abort();
+            makeUpdateThread = null;
+        }
+    }
+
     private static void MakeUpdater()
     {
         while (true)
