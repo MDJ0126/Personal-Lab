@@ -225,24 +225,21 @@ public class MaskTextureData : ScriptableObject
             float roofTime = GetWriteSpeed();
             float time = 0f;
             float startupTime = Time.realtimeSinceStartup;
+
+            int width = Mathf.RoundToInt(maskTexture.width);
             for (int i = 0; i < pixels.Length; i++)
             {
-                int maskX = i % Mathf.RoundToInt(maskTexture.width);
-                int maskY = i / Mathf.RoundToInt(maskTexture.width);
-                int x = (int)((Mathf.RoundToInt(coordinate.x) + maskX) / scale);
-                int y = (int)((Mathf.RoundToInt(coordinate.y) + maskY) / scale);
-                var texturePixel = texture.GetPixel(x, y);
+                int maskX = i % width;
+                int maskY = i / width;
                 var maskPixel = maskTexture.GetPixel(maskX, maskY);
 
-                if (maskPixel.a == 0f)
-                {
-                    // 마스크 픽셀이 투명하면 투명하게 적용
-                    result.SetPixel(maskX, maskY, Color.clear);
-                }
-                else
+                if (maskPixel.a != 0f)
                 {
                     // 마스크 픽셀이 투명하지 않으면 원색으로 적용
-                    result.SetPixel(maskX, maskY, texturePixel);
+                    int x = (int)((Mathf.RoundToInt(coordinate.x) + maskX) / scale);
+                    int y = (int)((Mathf.RoundToInt(coordinate.y) + maskY) / scale);
+                    var texturePixel = texture.GetPixel(x, y);
+                    maskTexture.SetPixel(maskX, maskY, texturePixel);
                 }
 
                 if (runTimeWriteSpeed != WriteSpeed.Force)
