@@ -49,7 +49,7 @@ public class MaskTextureDataEditor : Editor
             {
                 previewTexture2D = texture2D;
                 Repaint();
-            }, isRefresh);
+            });
         }
     }
 
@@ -120,9 +120,6 @@ public class MaskTextureDataEditor : Editor
 
             EditorGUILayout.EndHorizontal();
 
-            EditorGUILayout.BeginHorizontal();
-            EditorGUILayout.PropertyField(runTimeWriteSpeed, new GUIContent("RunTime Write Speed"));
-            EditorGUILayout.EndHorizontal();
             EditorGUILayout.EndVertical();
         }
         EditorGUILayout.EndVertical();

@@ -7,7 +7,6 @@ public class UITextureCustom : UITexture
     private static Texture2D clearTexture = null;
 
     [HideInInspector] [SerializeField] Object mTextureObject = null;
-    [HideInInspector] [SerializeField] bool mForceLoad = false;
 
     public MaskTextureData maskTextureScriptableObject
     {
@@ -29,7 +28,7 @@ public class UITextureCustom : UITexture
                 {
                     if (mTextureObject.Equals(value))
                         mainTexture = texture2D;
-                }, isForceLoad: mForceLoad);
+                });
             }
         }
     }
