@@ -205,11 +205,10 @@ public class MaskTextureData : ScriptableObject
 
         if (IsAvailable)
         {
-            Texture2D result = new Texture2D(Mathf.RoundToInt(maskTexture.width), Mathf.RoundToInt(maskTexture.height), TextureFormat.RGBA32, 1, false);
-            result.wrapMode = texture.wrapMode;
+            texture.wrapMode = texture.wrapMode;
 
 #if UNITY_EDITOR
-            result.alphaIsTransparency = true;  // 에디터에서만 사용 가능한 코드 (디버깅을 위해 강제 처리)
+            texture.alphaIsTransparency = true;  // 에디터에서만 사용 가능한 코드 (디버깅을 위해 강제 처리)
 #endif
             if (Application.isPlaying && runTimeWriteSpeed != WriteSpeed.Force)
             {
@@ -221,7 +220,7 @@ public class MaskTextureData : ScriptableObject
                 while (enumerator.MoveNext()) { }
             }
 
-            var pixels = result.GetPixels();
+            var pixels = maskTexture.GetPixels();
             float roofTime = GetWriteSpeed();
             float time = 0f;
             float startupTime = Time.realtimeSinceStartup;
@@ -256,9 +255,9 @@ public class MaskTextureData : ScriptableObject
                     }
                 }
             }
-            result.name = $"Masked {name} Texture (Instance)";
-            result.Apply();
-            onFinished.Invoke(result);
+            maskTexture.name = $"Masked {name} Texture (Instance)";
+            maskTexture.Apply();
+            onFinished.Invoke(maskTexture);
         }
         else
             onFinished.Invoke(texture);
