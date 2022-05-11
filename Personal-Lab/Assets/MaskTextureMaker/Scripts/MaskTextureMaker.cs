@@ -6,7 +6,6 @@ public class MaskTextureMaker : MonoBehaviour
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
     public static void CreateInstance()
     {
-        MaskTextureData.ReleaseThread();
         GameObject go = new GameObject();
         go.AddComponent<MaskTextureMaker>();
         go.name = nameof(MaskTextureMaker);
@@ -14,8 +13,5 @@ public class MaskTextureMaker : MonoBehaviour
     }
     #endregion
 
-    private void Update()
-    {
-        MaskTextureData.OnUpdater();
-    }
+    private void Update() => MaskTextureData.OnUpdater();
 }

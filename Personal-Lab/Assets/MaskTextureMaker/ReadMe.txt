@@ -9,8 +9,11 @@ Thank you for Using this Package!
 
 If you are not using NGUI, please delete the 'NGUI' folder.
 
+May 11, 2022
+- Apply Threading. (Write speed up!)
+
 April 6, 2022
-- Added Force Loading funcion.
+- Added Force loading funcion.
 
 March 22, 2022
 - Added MaskTextureMaker debugging function.

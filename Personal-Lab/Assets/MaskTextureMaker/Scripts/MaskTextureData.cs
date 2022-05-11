@@ -1,9 +1,7 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Threading;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 
 [CreateAssetMenu(fileName = "Masked Texture", menuName = "ScriptableObjects/Masked Texture")]
 public class MaskTextureData : ScriptableObject
@@ -35,62 +33,34 @@ public class MaskTextureData : ScriptableObject
     public int InstanceId => GetInstanceID();
 
     public bool IsAvailable => texture != null && maskTexture != null;
+    private byte[] rawData;
+    private Texture2D buildedTexture2D;
 
-    private WaitForEndOfFrame WaitForEndOfFrame = new WaitForEndOfFrame();
-
-    private byte[] resultData;
-
-    private Texture2D result;
-
-    public class RawData
+    /// <summary>
+    /// 마스크 텍스쳐 가져오기
+    /// </summary>
+    /// <param name="isRefresh">갱신 여부</param>
+    /// <returns></returns>
+    public void RequestMaskTexture(Action<Texture2D> onFinished, bool isRefresh = false)
     {
-        private Texture2D texture2D;
-        private byte[] rawData;
-        public byte[] resultData;
-        public int width;
-        public int height;
-        public int Length;
-
-        public RawData(Texture2D texture2D)
+        if (IsAvailable)
         {
-            this.texture2D = texture2D;
-            rawData = texture2D.GetRawTextureData();
-            resultData = texture2D.GetRawTextureData();
-            width = Mathf.RoundToInt(texture2D.width);
-            height = Mathf.RoundToInt(texture2D.height);
-            Length = rawData.Length / 4;
-        }
-
-        public byte[] GetPixel(int x, int y)
-        {
-            int index = x * 4 + y * width * 4;
-            if (index > 0 && index < rawData.Length)
+            if (isRefresh || !maskedTextures.TryGetValue(InstanceId, out var texture2D) || texture2D == null)
             {
-                byte r = rawData[index];
-                byte g = rawData[index + 1];
-                byte b = rawData[index + 2];
-                byte a = rawData[index + 3];
-                return new byte[] { r , g, b, a };
+                maskedTextures.Remove(InstanceId);
+                if (!maskedTextures.ContainsKey(InstanceId))
+                {
+                    MakeMaskedTextureAsyc(() =>
+                    {
+                        onFinished?.Invoke(maskedTextures[InstanceId]);
+                    });
+                }
             }
-            return null;
+            else
+                onFinished?.Invoke(texture2D);
         }
-
-        public void SetPixel(int x, int y, byte[] color)
-        {
-            if (color != null && color.Length == 4)
-            {
-                int index = x * 4 + y * width * 4;
-                resultData[index] = color[0];
-                resultData[index + 1] = color[1];
-                resultData[index + 2] = color[2];
-                resultData[index + 3] = color[3];
-            }
-        }
-
-        public void Build()
-        {
-            Array.Copy(resultData, rawData, rawData.Length);
-        }
+        else
+            onFinished?.Invoke(null);
     }
 
     /// <summary>
@@ -123,40 +93,7 @@ public class MaskTextureData : ScriptableObject
     }
 
     /// <summary>
-    /// 마스크 텍스쳐 가져오기
-    /// </summary>
-    /// <param name="isRefresh">갱신 여부</param>
-    /// <returns></returns>
-    public void RequestMaskTexture(Action<Texture2D> onFinished, bool isRefresh = false)
-    {
-        if (makeUpdateThread == null)
-        {
-            makeUpdateThread = new Thread(() => MakeUpdater());
-            makeUpdateThread.Start();
-        }
-
-        if (IsAvailable)
-        {
-            if (isRefresh || !maskedTextures.TryGetValue(InstanceId, out var texture2D) || texture2D == null)
-            {
-                maskedTextures.Remove(InstanceId);
-                if (!maskedTextures.ContainsKey(InstanceId))
-                {
-                    MakeMaskedTextureAsyc(() =>
-                    {
-                        onFinished?.Invoke(maskedTextures[InstanceId]);
-                    });
-                }
-            }
-            else
-                onFinished?.Invoke(texture2D);
-        }
-        else
-            onFinished?.Invoke(null);
-    }
-
-    /// <summary>
-    /// 대상 텍스쳐를 영역만큼 잘라서 반환
+    /// 마스킹 텍스쳐 제작
     /// </summary>
     /// <returns>마스킹 적용된 텍스쳐 반환</returns>
     public void MakeMaskedTextureAsyc(Action onFinished)
@@ -169,8 +106,9 @@ public class MaskTextureData : ScriptableObject
 #endif
             var textureRawData = new RawData(GetReadableTexture2D(texture));
             var maskTextureRawData = new RawData(GetReadableTexture2D(maskTexture));
-            
-            makeMessageQueue.Enqueue(new MakeMessage
+
+            // 텍스쳐 제작 메세지큐에 등록
+            StartThread(new MakeMessage
             {
                 maskTextureData = this,
                 textureRawData = textureRawData,
@@ -178,33 +116,91 @@ public class MaskTextureData : ScriptableObject
                 onFinished = onFinished,
             });
         }
+        else
+            onFinished?.Invoke();
     }
 
+    /// <summary>
+    /// 텍스쳐 적용하기
+    /// </summary>
     public void Build()
     {
-        if (result == null)
+        if (rawData != null)
         {
-            result = new Texture2D(maskTexture.width, maskTexture.height);
-            result.name = this.name;
-        }
+            if (buildedTexture2D == null)
+            {
+                buildedTexture2D = new Texture2D(maskTexture.width, maskTexture.height);
+                buildedTexture2D.name = this.name;
+            }
 
-        result.LoadRawTextureData(resultData);
-        result.Apply();
+            buildedTexture2D.LoadRawTextureData(rawData);
+            buildedTexture2D.Apply();
 
-        if (maskedTextures.TryGetValue(InstanceId, out var texture2D))
-        {
-            texture2D = result;
+            if (maskedTextures.TryGetValue(InstanceId, out var texture2D))
+            {
+                texture2D = buildedTexture2D;
+            }
+            else
+                maskedTextures.Add(InstanceId, buildedTexture2D);
         }
-        else
-            maskedTextures.Add(InstanceId, result);
     }
 
     #region Static Method
 
+    /// <summary>
+    /// 이미지 바이트 데이터 (원시 데이터)
+    /// </summary>
+    public class RawData
+    {
+        private byte[] originalRawData;
+        private byte[] changedRawData;
+        public int width;
+        public int height;
+        public int Length;
+
+        public RawData(Texture2D texture2D)
+        {
+            originalRawData = texture2D.GetRawTextureData();
+            changedRawData = texture2D.GetRawTextureData();
+            width = Mathf.RoundToInt(texture2D.width);
+            height = Mathf.RoundToInt(texture2D.height);
+            Length = originalRawData.Length / 4;
+        }
+
+        public byte[] GetPixel(int x, int y)
+        {
+            int index = x * 4 + y * width * 4;
+            if (index > 0 && index < originalRawData.Length)
+            {
+                byte r = originalRawData[index];
+                byte g = originalRawData[index + 1];
+                byte b = originalRawData[index + 2];
+                byte a = originalRawData[index + 3];
+                return new byte[] { r, g, b, a };
+            }
+            return null;
+        }
+
+        public void SetPixel(int x, int y, byte[] color)
+        {
+            if (color != null && color.Length == 4)
+            {
+                int index = x * 4 + y * width * 4;
+                changedRawData[index]     = color[0];   // r
+                changedRawData[index + 1] = color[1];   // g
+                changedRawData[index + 2] = color[2];   // b
+                changedRawData[index + 3] = color[3];   // a
+            }
+        }
+
+        public void Apply() => Array.Copy(changedRawData, originalRawData, originalRawData.Length);
+        public byte[] GetRawData() => changedRawData;
+    }
+
     public static Queue<MakeMessage> makeMessageQueue = new Queue<MakeMessage>();
     public static Queue<ResultMessage> resultMessageQueue = new Queue<ResultMessage>();
 
-    public struct MakeMessage
+    public class MakeMessage
     {
         public MaskTextureData maskTextureData;
         public RawData textureRawData;
@@ -212,10 +208,9 @@ public class MaskTextureData : ScriptableObject
         public Action onFinished;
     }
 
-    public struct ResultMessage
+    public class ResultMessage
     {
-        public MaskTextureData maskTextureData;
-        public Action onFinished;
+        public MakeMessage completeMaskMessage;
     }
 
     static MaskTextureData()
@@ -226,38 +221,40 @@ public class MaskTextureData : ScriptableObject
 #endif
     }
 
+    /// <summary>
+    /// 완성된 이미지 콜백 처리 업데이터
+    /// </summary>
     public static void OnUpdater()
     {
         if (resultMessageQueue.Count > 0)
         {
-            var message = resultMessageQueue.Dequeue();
-            message.maskTextureData.Build();
-            message.onFinished.Invoke();
+            var msg = resultMessageQueue.Dequeue();
+            msg.completeMaskMessage.maskTextureData.Build();
+            msg.completeMaskMessage.onFinished.Invoke();
         }
     }
 
-    private static Thread makeUpdateThread = null;
+    //초기 실행 가능한 쓰레드 4개
+    //최대 실행 가능한 쓰레드 4개
+    private static Semaphore semaphore = new Semaphore(4, 4);
 
-    public static void ReleaseThread()
+    /// <summary>
+    /// 쓰레드 시작
+    /// </summary>
+    public static void StartThread(MakeMessage msg)
     {
-        if (makeUpdateThread != null)
-        {
-            makeUpdateThread.Abort();
-            makeUpdateThread = null;
-        }
+        makeMessageQueue.Enqueue(msg);
+        new Thread(() => Run()).Start();
     }
 
-    private static void MakeUpdater()
+    /// <summary>
+    /// 쓰레드 함수
+    /// </summary>
+    private static void Run()
     {
-        while (true)
-        {
-            if (makeMessageQueue.Count > 0)
-            {
-                Make(makeMessageQueue.Dequeue());
-            }
-            else
-                Thread.Sleep(100);
-        }
+        semaphore.WaitOne();
+        Make(makeMessageQueue.Dequeue());
+        semaphore.Release();
     }
 
     /// <summary>
@@ -277,7 +274,7 @@ public class MaskTextureData : ScriptableObject
                 var flipPixel = source.GetPixel(source.width - x, y);
                 source.SetPixel(x, y, flipPixel);
             }
-            source.Build();
+            source.Apply();
         }
 
         // 세로로 뒤집기
@@ -290,20 +287,19 @@ public class MaskTextureData : ScriptableObject
                 var flipPixel = source.GetPixel(x, source.height - y);
                 source.SetPixel(x, y, flipPixel);
             }
-            source.Build();
+            source.Apply();
         }
     }
 
     /// <summary>
     /// 마스크 텍스쳐 제작
     /// </summary>
-    /// <param name="requestMessage"></param>
-    private static void Make(MakeMessage requestMessage)
+    /// <param name="msg"></param>
+    private static void Make(MakeMessage msg)
     {
-        var maskTextureData = requestMessage.maskTextureData;
-        var textureRawData = requestMessage.textureRawData;
-        var maskTextureRawData = requestMessage.maskTextureRawData;
-        var onFinished = requestMessage.onFinished;
+        var maskTextureData = msg.maskTextureData;
+        var textureRawData = msg.textureRawData;
+        var maskTextureRawData = msg.maskTextureRawData;
 
         FlipTexture2D(maskTextureData.flipMode, ref textureRawData);
         for (int i = 0; i < maskTextureRawData.Length; i++)
@@ -322,8 +318,8 @@ public class MaskTextureData : ScriptableObject
                 maskTextureRawData.SetPixel(maskX, maskY, texturePixel);
             }
         }
-        maskTextureData.resultData = maskTextureRawData.resultData;
-        resultMessageQueue.Enqueue(new ResultMessage { maskTextureData = maskTextureData, onFinished = onFinished });
+        maskTextureData.rawData = maskTextureRawData.GetRawData();
+        resultMessageQueue.Enqueue(new ResultMessage { completeMaskMessage = msg});
     }
 
     #endregion

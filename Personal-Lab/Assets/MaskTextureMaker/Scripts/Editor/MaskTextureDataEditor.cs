@@ -16,7 +16,6 @@ public class MaskTextureDataEditor : Editor
     SerializedProperty maskTexture;
     SerializedProperty coordinate;
     SerializedProperty scale;
-    SerializedProperty runTimeWriteSpeed;
     SerializedProperty flipMode;
 
     public static Object previousSelection = null;
@@ -28,7 +27,6 @@ public class MaskTextureDataEditor : Editor
         maskTexture = serializedObject.FindProperty("maskTexture");
         coordinate = serializedObject.FindProperty("coordinate");
         scale = serializedObject.FindProperty("scale");
-        runTimeWriteSpeed = serializedObject.FindProperty("runTimeWriteSpeed");
         flipMode = serializedObject.FindProperty("flipMode");
 
         SetPreviewTexture();
