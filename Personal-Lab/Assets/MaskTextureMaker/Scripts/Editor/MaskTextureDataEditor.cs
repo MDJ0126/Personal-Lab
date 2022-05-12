@@ -35,10 +35,7 @@ public class MaskTextureDataEditor : Editor
 
     private void UndoRedoPerformed()
     {
-        data.CreateRawData(() =>
-        {
-            SetPreviewTexture();
-        });
+        SetPreviewTexture();
     }
 
     private void SetPreviewTexture()
@@ -149,11 +146,7 @@ public class MaskTextureDataEditor : Editor
         if (GUI.changed)
         {
             serializedObject.ApplyModifiedProperties();
-            data.CreateRawData(() =>
-            {
-                serializedObject.ApplyModifiedProperties();
-                SetPreviewTexture();
-            });
+            SetPreviewTexture();
         }
     }
     
