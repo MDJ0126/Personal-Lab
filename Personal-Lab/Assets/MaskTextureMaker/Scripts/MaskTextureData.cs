@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
+using System.IO.Compression;
 using System.Threading;
 using UnityEngine;
 
@@ -7,14 +9,6 @@ using UnityEngine;
 public class MaskTextureData : ScriptableObject
 {
     public static Dictionary<int, Texture2D> maskedTextures = new Dictionary<int, Texture2D>();
-
-    public enum WriteSpeed
-    {
-        Slow,
-        Default,
-        Fast,
-        Force,
-    }
 
     [Flags]
     public enum FlipMode
@@ -26,15 +20,17 @@ public class MaskTextureData : ScriptableObject
 
     [SerializeField] private Texture2D texture;
     [SerializeField] private Texture2D maskTexture;
+
     [SerializeField] private Vector2 coordinate = Vector2.one;
     [SerializeField] private float scale = 1f;
     [SerializeField] private FlipMode flipMode = FlipMode.None;
 
+    [SerializeField] public byte[] compressedRawData;
+    private byte[] decompressedRawData;
     public int InstanceId => GetInstanceID();
-
     public bool IsAvailable => texture != null && maskTexture != null;
-    private byte[] rawData;
-    private Texture2D buildedTexture2D;
+
+    private bool _isCreating = false;
 
     /// <summary>
     /// 마스크 텍스쳐 가져오기
@@ -50,9 +46,10 @@ public class MaskTextureData : ScriptableObject
                 maskedTextures.Remove(InstanceId);
                 if (!maskedTextures.ContainsKey(InstanceId))
                 {
-                    MakeMaskedTextureAsyc(() =>
+                    RequestTextureAsyc(() =>
                     {
-                        onFinished?.Invoke(maskedTextures[InstanceId]);
+                        if (maskedTextures.TryGetValue(InstanceId, out var texture))
+                            onFinished?.Invoke(texture);
                     });
                 }
             }
@@ -93,10 +90,9 @@ public class MaskTextureData : ScriptableObject
     }
 
     /// <summary>
-    /// 마스킹 텍스쳐 제작
+    /// 1. 원시 데이터 제작 (바이트 형식의 이미지 데이터 제작)
     /// </summary>
-    /// <returns>마스킹 적용된 텍스쳐 반환</returns>
-    public void MakeMaskedTextureAsyc(Action onFinished)
+    public void CreateRawData(Action onFinished)
     {
         if (IsAvailable)
         {
@@ -108,7 +104,7 @@ public class MaskTextureData : ScriptableObject
             var maskTextureRawData = new RawData(GetReadableTexture2D(maskTexture));
 
             // 텍스쳐 제작 메세지큐에 등록
-            StartThread(new MakeMessage
+            StartCreateThread(new Message
             {
                 maskTextureData = this,
                 textureRawData = textureRawData,
@@ -116,24 +112,33 @@ public class MaskTextureData : ScriptableObject
                 onFinished = onFinished,
             });
         }
-        else
-            onFinished?.Invoke();
     }
 
     /// <summary>
-    /// 텍스쳐 적용하기
+    /// 2. 로우 데이터 기반으로 마스킹 텍스쳐 제작
+    /// </summary>
+    /// <returns>마스킹 적용된 텍스쳐 반환</returns>
+    public void RequestTextureAsyc(Action onFinished)
+    {
+        // 텍스쳐 제작 메세지큐에 등록
+        StartRequestThread(new Message
+        {
+            maskTextureData = this,
+            onFinished = onFinished,
+        });
+    }
+
+    /// <summary>
+    /// 3. 런타임, 메모리에 텍스쳐 적용하기
     /// </summary>
     public void Build()
     {
-        if (rawData != null)
+        if (compressedRawData != null)
         {
-            if (buildedTexture2D == null)
-            {
-                buildedTexture2D = new Texture2D(maskTexture.width, maskTexture.height);
-                buildedTexture2D.name = this.name;
-            }
+            Texture2D buildedTexture2D = new Texture2D(maskTexture.width, maskTexture.height);
+            buildedTexture2D.name = this.name;
 
-            buildedTexture2D.LoadRawTextureData(rawData);
+            buildedTexture2D.LoadRawTextureData(decompressedRawData);
             buildedTexture2D.Apply();
 
             if (maskedTextures.TryGetValue(InstanceId, out var texture2D))
@@ -150,6 +155,7 @@ public class MaskTextureData : ScriptableObject
     /// <summary>
     /// 이미지 바이트 데이터 (원시 데이터)
     /// </summary>
+    [Serializable]
     public class RawData
     {
         private byte[] originalRawData;
@@ -161,7 +167,7 @@ public class MaskTextureData : ScriptableObject
         public RawData(Texture2D texture2D)
         {
             originalRawData = texture2D.GetRawTextureData();
-            changedRawData = texture2D.GetRawTextureData();
+            IntializeRawData();
             width = Mathf.RoundToInt(texture2D.width);
             height = Mathf.RoundToInt(texture2D.height);
             Length = originalRawData.Length / 4;
@@ -193,14 +199,24 @@ public class MaskTextureData : ScriptableObject
             }
         }
 
-        public void Apply() => Array.Copy(changedRawData, originalRawData, originalRawData.Length);
+        public void IntializeRawData()
+        {
+            changedRawData = new byte[originalRawData.Length];
+        }
+
+        public void Apply()
+        {
+            if (changedRawData == null) IntializeRawData();
+            Array.Copy(changedRawData, originalRawData, originalRawData.Length);
+        }
         public byte[] GetRawData() => changedRawData;
     }
 
-    public static Queue<MakeMessage> makeMessageQueue = new Queue<MakeMessage>();
-    public static Queue<ResultMessage> resultMessageQueue = new Queue<ResultMessage>();
+    public static Queue<Message> completeCreateMessageQueue = new Queue<Message>();
+    public static Queue<Message> requestMessageQueue = new Queue<Message>();
+    public static Queue<Message> resultMessageQueue = new Queue<Message>();
 
-    public class MakeMessage
+    public class Message
     {
         public MaskTextureData maskTextureData;
         public RawData textureRawData;
@@ -208,53 +224,96 @@ public class MaskTextureData : ScriptableObject
         public Action onFinished;
     }
 
-    public class ResultMessage
-    {
-        public MakeMessage completeMaskMessage;
-    }
-
     static MaskTextureData()
     {
+        new Thread(() => RequestRun()).Start();
 #if UNITY_EDITOR
-        UnityEditor.EditorApplication.update -= OnUpdater;
-        UnityEditor.EditorApplication.update += OnUpdater;
+        UnityEditor.EditorApplication.update -= OnCreateSaftyUpdater;
+        UnityEditor.EditorApplication.update += OnCreateSaftyUpdater;
+        UnityEditor.EditorApplication.update -= OnRequestSaftyUpdater;
+        UnityEditor.EditorApplication.update += OnRequestSaftyUpdater;
 #endif
     }
 
+    private static Dictionary<int, Thread> _createThreads = new Dictionary<int, Thread>();
+
     /// <summary>
-    /// 완성된 이미지 콜백 처리 업데이터
+    /// 제작 쓰레드 실행
     /// </summary>
-    public static void OnUpdater()
+    /// <param name="msg"></param>
+    private static void StartCreateThread(Message msg)
+    {
+        if (_createThreads.TryGetValue(msg.maskTextureData.InstanceId, out var thread))
+        {
+            thread.Abort();
+        }
+        else
+        {
+            _createThreads.Add(msg.maskTextureData.InstanceId, null);
+        }
+        _createThreads[msg.maskTextureData.InstanceId] = new Thread(() => CreateRun(msg));
+        _createThreads[msg.maskTextureData.InstanceId].Start();
+    }
+
+    /// <summary>
+    /// 제작 쓰레드 함수
+    /// </summary>
+    private static void CreateRun(Message msg)
+    {
+        Thread.Sleep(50);
+        Make(msg);
+        completeCreateMessageQueue.Enqueue(msg);
+    }
+
+    /// <summary>
+    /// 제작 완료 업데이터 (메인 쓰레드)
+    /// </summary>
+    private static void OnCreateSaftyUpdater()
+    {
+        if (completeCreateMessageQueue.Count > 0)
+        {
+            var msg = completeCreateMessageQueue.Dequeue();
+            _createThreads.Remove(msg.maskTextureData.InstanceId);
+            msg.onFinished?.Invoke();
+        }
+    }
+
+    /// <summary>
+    /// 로우 데이터 기반으로 이미지 요청 쓰레드 시작
+    /// </summary>
+    public static void StartRequestThread(Message msg)
+    {
+        requestMessageQueue.Enqueue(msg);
+    }
+
+    /// <summary>
+    /// 로우 데이터 기반으로 이미지 요청 콜백 처리 업데이터
+    /// </summary>
+    public static void RequestRun()
+    {
+        while (true)
+        {
+            if (requestMessageQueue.Count > 0)
+            {
+                var msg = requestMessageQueue.Dequeue();
+                msg.maskTextureData.decompressedRawData = Decompresse(msg.maskTextureData.compressedRawData);
+                resultMessageQueue.Enqueue(msg);
+            }
+            Thread.Sleep(50);
+        }
+    }
+
+    /// <summary>
+    /// 콜백 처리 업데이터 (메인 쓰레드)
+    /// </summary>
+    public static void OnRequestSaftyUpdater()
     {
         if (resultMessageQueue.Count > 0)
         {
             var msg = resultMessageQueue.Dequeue();
-            msg.completeMaskMessage.maskTextureData.Build();
-            msg.completeMaskMessage.onFinished.Invoke();
+            msg.maskTextureData.Build();
+            msg.onFinished?.Invoke();
         }
-    }
-
-    //초기 실행 가능한 쓰레드 4개
-    //최대 실행 가능한 쓰레드 4개
-    private static Semaphore semaphore = new Semaphore(4, 4);
-
-    /// <summary>
-    /// 쓰레드 시작
-    /// </summary>
-    public static void StartThread(MakeMessage msg)
-    {
-        makeMessageQueue.Enqueue(msg);
-        new Thread(() => Run()).Start();
-    }
-
-    /// <summary>
-    /// 쓰레드 함수
-    /// </summary>
-    private static void Run()
-    {
-        semaphore.WaitOne();
-        Make(makeMessageQueue.Dequeue());
-        semaphore.Release();
     }
 
     /// <summary>
@@ -295,7 +354,7 @@ public class MaskTextureData : ScriptableObject
     /// 마스크 텍스쳐 제작
     /// </summary>
     /// <param name="msg"></param>
-    private static void Make(MakeMessage msg)
+    private static void Make(Message msg)
     {
         var maskTextureData = msg.maskTextureData;
         var textureRawData = msg.textureRawData;
@@ -318,9 +377,49 @@ public class MaskTextureData : ScriptableObject
                 maskTextureRawData.SetPixel(maskX, maskY, texturePixel);
             }
         }
-        maskTextureData.rawData = maskTextureRawData.GetRawData();
-        resultMessageQueue.Enqueue(new ResultMessage { completeMaskMessage = msg});
+        maskTextureData.compressedRawData = Compresse(maskTextureRawData.GetRawData());
     }
 
+    #endregion
+
+    #region Compresse
+
+    /// <summary>
+    /// 압축
+    /// </summary>
+    private static byte[] Compresse(byte[] originByte)
+    {
+        byte[] compressedByte;
+        using (MemoryStream ms = new MemoryStream())
+        {
+            using (DeflateStream ds = new DeflateStream(ms, CompressionMode.Compress))
+            {
+                ds.Write(originByte, 0, originByte.Length);
+            }
+            compressedByte = ms.ToArray();
+        }
+        return compressedByte;
+    }
+
+    /// <summary>
+    /// 압축 풀기
+    /// </summary>
+    /// <param name="compressedByte"></param>
+    private static byte[] Decompresse(byte[] compressedByte)
+    {
+        MemoryStream resultStream = new MemoryStream();
+        using (MemoryStream ms = new MemoryStream(compressedByte))
+        {
+            using (DeflateStream ds = new DeflateStream(ms, CompressionMode.Decompress))
+            {
+                ds.CopyTo(resultStream);
+                ds.Close();
+            }
+        }
+
+        byte[] deCompressedByte = resultStream.ToArray();
+        resultStream.Dispose();
+        return deCompressedByte;
+    }
     #endregion
 }

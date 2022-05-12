@@ -28,14 +28,17 @@ public class MaskTextureDataEditor : Editor
         coordinate = serializedObject.FindProperty("coordinate");
         scale = serializedObject.FindProperty("scale");
         flipMode = serializedObject.FindProperty("flipMode");
-
+        
         SetPreviewTexture();
         Undo.undoRedoPerformed = UndoRedoPerformed;
     }
 
     private void UndoRedoPerformed()
     {
-        SetPreviewTexture();
+        data.CreateRawData(() =>
+        {
+            SetPreviewTexture();
+        });
     }
 
     private void SetPreviewTexture()
@@ -146,10 +149,14 @@ public class MaskTextureDataEditor : Editor
         if (GUI.changed)
         {
             serializedObject.ApplyModifiedProperties();
-            SetPreviewTexture();
+            data.CreateRawData(() =>
+            {
+                serializedObject.ApplyModifiedProperties();
+                SetPreviewTexture();
+            });
         }
     }
-
+    
     public override bool HasPreviewGUI() => IsSingleSelectionObject;
     public override void OnPreviewGUI(Rect r, GUIStyle background)
     {

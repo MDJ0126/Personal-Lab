@@ -13,5 +13,5 @@ public class MaskTextureMaker : MonoBehaviour
     }
     #endregion
 
-    private void Update() => MaskTextureData.OnUpdater();
+    private void Update() => MaskTextureData.OnRequestSaftyUpdater();
 }
