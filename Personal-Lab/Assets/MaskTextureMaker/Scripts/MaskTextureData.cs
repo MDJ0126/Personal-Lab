@@ -9,6 +9,7 @@ using UnityEngine;
 public class MaskTextureData : ScriptableObject
 {
     public static Dictionary<int, Texture2D> maskedTextures = new Dictionary<int, Texture2D>();
+    public static void Clear() => maskedTextures.Clear();
 
     [Flags]
     public enum FlipMode
@@ -336,6 +337,10 @@ public class MaskTextureData : ScriptableObject
     /// <param name="source"></param>
     private static void FlipTexture2D(FlipMode flipMode, ref RawDataInfo source)
     {
+        const int ROOFTIME = 1;
+        TimeSpan start = new TimeSpan(DateTime.Now.Ticks);
+        DateTime time = DateTime.MinValue;
+
         // 가로로 뒤집기
         if ((flipMode & FlipMode.X) == FlipMode.X)
         {
@@ -345,6 +350,14 @@ public class MaskTextureData : ScriptableObject
                 int y = i / Mathf.RoundToInt(source.width);
                 var flipPixel = source.GetPixel(source.width - x, y);
                 source.SetPixel(x, y, flipPixel);
+
+                time = DateTime.Now - start;
+                if (ROOFTIME <= time.Second)
+                {
+                    Thread.Sleep(50);
+                    time = DateTime.MinValue;
+                    start = new TimeSpan(DateTime.Now.Ticks);
+                }
             }
             source.Apply();
         }
@@ -358,10 +371,19 @@ public class MaskTextureData : ScriptableObject
                 int y = i / Mathf.RoundToInt(source.width);
                 var flipPixel = source.GetPixel(x, source.height - y);
                 source.SetPixel(x, y, flipPixel);
+
+                time = DateTime.Now - start;
+                if (ROOFTIME <= time.Second)
+                {
+                    Thread.Sleep(50);
+                    time = DateTime.MinValue;
+                    start = new TimeSpan(DateTime.Now.Ticks);
+                }
             }
             source.Apply();
         }
     }
+
 
     /// <summary>
     /// 마스크 텍스쳐 제작
@@ -369,6 +391,10 @@ public class MaskTextureData : ScriptableObject
     /// <param name="msg"></param>
     private static void BuildRawData(Message msg)
     {
+        const int ROOFTIME = 1;
+        TimeSpan start = new TimeSpan(DateTime.Now.Ticks);
+        DateTime time = DateTime.MinValue;
+
         var maskTextureData = msg.maskTextureData;
         var textureRawData = msg.textureRawData;
         var maskTextureRawData = msg.maskTextureRawData;
@@ -389,7 +415,16 @@ public class MaskTextureData : ScriptableObject
                 // 마스크 픽셀이 투명하지 않으면 원색으로 적용
                 maskTextureRawData.SetPixel(maskX, maskY, texturePixel);
             }
+
+            time = DateTime.Now - start;
+            if (ROOFTIME <= time.Second)
+            {
+                Thread.Sleep(50);
+                time = DateTime.MinValue;
+                start = new TimeSpan(DateTime.Now.Ticks);
+            }
         }
+
         maskTextureData.compressedRawData = Compresse(maskTextureRawData.GetRawData());
     }
 

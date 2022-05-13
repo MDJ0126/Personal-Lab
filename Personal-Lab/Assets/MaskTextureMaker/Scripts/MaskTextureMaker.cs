@@ -1,4 +1,5 @@
 ﻿using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public class MaskTextureMaker : MonoBehaviour
 {
@@ -12,6 +13,17 @@ public class MaskTextureMaker : MonoBehaviour
         DontDestroyOnLoad(go);
     }
     #endregion
+
+    private void Awake()
+    {
+        SceneManager.sceneLoaded -= OnSceneLoaded;
+    }
+
+    private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+    {
+        if (mode == LoadSceneMode.Single)
+            MaskTextureData.Clear();
+    }
 
     private void Update() => MaskTextureData.OnRequestSaftyUpdater();
 }
