@@ -38,12 +38,10 @@ public class UITextureCustomInspector : UITextureInspector
 				var maskTextureScriptableObject = sp.objectReferenceValue as MaskTextureData;
 				if (maskTextureScriptableObject != null)
 				{
-					maskTextureScriptableObject.RequestMaskTexture((texture2D) =>
-					{
-						mTexCustom.mainTexture = texture2D;
-						NGUISettings.texture = texture2D;
-					});
-				}
+					var texture2D = maskTextureScriptableObject.GetTexture();
+                    mTexCustom.mainTexture = texture2D;
+                    NGUISettings.texture = texture2D;
+                }
 				else
 				{
 					mTexCustom.SetClearTexture();

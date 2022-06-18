@@ -14,7 +14,7 @@ public class MaskTextureDataEditor : Editor
 
     SerializedProperty texture;
     SerializedProperty maskTexture;
-    SerializedProperty coordinate;
+    SerializedProperty offset;
     SerializedProperty scale;
     SerializedProperty flipMode;
 
@@ -25,7 +25,7 @@ public class MaskTextureDataEditor : Editor
         data = target as MaskTextureData;
         texture = serializedObject.FindProperty("texture");
         maskTexture = serializedObject.FindProperty("maskTexture");
-        coordinate = serializedObject.FindProperty("coordinate");
+        offset = serializedObject.FindProperty("offset");
         scale = serializedObject.FindProperty("scale");
         flipMode = serializedObject.FindProperty("flipMode");
         
@@ -42,12 +42,8 @@ public class MaskTextureDataEditor : Editor
     {
         if (IsSingleSelectionObject)
         {
-            bool isRefresh = !Application.isPlaying;
-            data.RequestMaskTexture((texture2D) =>
-            {
-                previewTexture2D = texture2D;
-                Repaint();
-            }, isRefresh: isRefresh);
+            previewTexture2D = data.GetTexture();
+            Repaint();
         }
     }
 
@@ -81,7 +77,7 @@ public class MaskTextureDataEditor : Editor
             EditorGUILayout.EndHorizontal();
 
             EditorGUILayout.BeginHorizontal();
-            EditorGUILayout.PropertyField(coordinate);
+            EditorGUILayout.PropertyField(offset);
             EditorGUILayout.EndHorizontal();
 
             EditorGUILayout.BeginHorizontal();

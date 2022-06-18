@@ -9,9 +9,6 @@ public class ExampleMaskedTexure : MonoBehaviour
 
     public void Start()
     {
-        maskTextureData.RequestMaskTexture((texture2D) =>
-        {
-            meshRenderer.material.mainTexture = texture2D;
-        });
+        meshRenderer.material = maskTextureData.GetMeterial();
     }
 }

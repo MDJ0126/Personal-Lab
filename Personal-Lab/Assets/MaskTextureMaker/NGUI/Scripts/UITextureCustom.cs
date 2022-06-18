@@ -24,11 +24,7 @@ public class UITextureCustom : UITexture
 
             if (value != null)
             {
-                value.RequestMaskTexture((texture2D) =>
-                {
-                    if (mTextureObject.Equals(value))
-                        mainTexture = texture2D;
-                });
+                mainTexture = value.GetTexture();
             }
         }
     }
@@ -39,10 +35,7 @@ public class UITextureCustom : UITexture
         SetClearTexture();
         if (maskTextureScriptableObject != null)
         {
-            maskTextureScriptableObject.RequestMaskTexture((texture2D) =>
-            {
-                mainTexture = texture2D;
-            });
+            mainTexture = maskTextureScriptableObject.GetTexture();
         }
     }
 
