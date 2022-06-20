@@ -20,8 +20,7 @@ Shader "MaskTexture/AlphaMask"
 
         Pass
         {
-		    Blend SrcAlpha OneMinusSrcAlpha
-		    //ColorMaterial AmbientAndDiffuse
+		    Blend SrcAlpha OneMinusSrcAlpha // 블랜딩 옵션 'Alpha Blend', 포토샵의 블랜딩 기능을 생각하면 좋다.
 
             SetTexture [_MainTex]   // = previous
             SetTexture [_Texture] 
