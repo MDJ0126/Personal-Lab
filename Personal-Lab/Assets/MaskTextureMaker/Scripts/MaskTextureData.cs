@@ -27,11 +27,11 @@ public class MaskTextureData : ScriptableObject
         Y = 1 << 1,
     }
 
-    [HideInInspector][SerializeField] private Texture2D texture;
-    [HideInInspector][SerializeField] private Texture2D maskTexture;
-    [HideInInspector][SerializeField] private Vector2 offset = Vector2.zero;
-    [HideInInspector][SerializeField] private float scale = 1f;
-    [HideInInspector][SerializeField] private FlipMode flipMode = FlipMode.None;
+    [HideInInspector][SerializeField] public Texture texture;
+    [HideInInspector][SerializeField] public Texture maskTexture;
+    [HideInInspector][SerializeField] public Vector2 offset = Vector2.zero;
+    [HideInInspector][SerializeField] public float scale = 1f;
+    [HideInInspector][SerializeField] public FlipMode flipMode = FlipMode.None;
 
     public bool IsAvailable => texture != null && maskTexture != null;
 
