@@ -4,23 +4,11 @@ class Program
 {
     private static void Main(string[] args)
     {
-        Example example = new Example();
-        example.Main();
-
-        //PriorityQueue<int> priorityQueue = new PriorityQueue<int>();
-        //priorityQueue.Enqueue(9, 9);
-        //priorityQueue.Enqueue(6, 6);
-        //priorityQueue.Enqueue(7, 7);
-        //priorityQueue.Enqueue(5, 5);
-        ////priorityQueue.Enqueue(3, 3);
-        ////priorityQueue.Enqueue(1, 1);
-        //priorityQueue.Enqueue(8, 8);
-        ////priorityQueue.Enqueue(2, 2);
-        ////priorityQueue.Enqueue(4, 4);
-
-        //while (priorityQueue.Count > 0)
-        //{
-        //    Console.WriteLine(priorityQueue.Dequeue());
-        //}
+        ShiftComparer shiftComparer = ShiftComparer.Init();
+        shiftComparer.Add(1);                           // 1번째 추가
+        Console.WriteLine(shiftComparer.IsExist(1));    // 1번째 존재 여부 확인 ==> True
+        Console.WriteLine(shiftComparer.IsExist(2));    // 2번째 존재 여부 확인 ==> False
+        shiftComparer.Remove(1);                        // 1번째 제거
+        Console.WriteLine(shiftComparer.IsExist(1));    // 1번째 존재 여부 확인 ==> False
     }
 }
