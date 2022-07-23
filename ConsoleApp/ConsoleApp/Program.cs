@@ -1,47 +1,126 @@
-﻿//참고: https://docs.microsoft.com/ko-kr/dotnet/machine-learning/how-does-mldotnet-work
+﻿// <SnippetAddUsings>
 using System;
+using System.IO;
 using Microsoft.ML;
-using Microsoft.ML.Data;
+using Microsoft.ML.TimeSeries;
+using System.Collections;
+using System.Collections.Generic;
+// </SnippetAddUsings>
 
-class Program
+namespace PhoneCallsAnomalyDetection
 {
-    public class HouseData
+    class Program
     {
-        public float Size { get; set; }
-        public float Price { get; set; }
-    }
+        // <SnippetDeclareGlobalVariables>
+        static readonly string _dataPath = Path.Combine(Environment.CurrentDirectory, "Data", "phone-calls.csv");
+        // </SnippetDeclareGlobalVariables>
+        static void Main(string[] args)
+        {
+            // Create MLContext to be shared across the model creation workflow objects
+            // <SnippetCreateMLContext>
+            MLContext mlContext = new MLContext();
+            // </SnippetCreateMLContext>
 
-    public class Prediction
-    {
-        [ColumnName("Score")]
-        public float Price { get; set; }
-    }
+            //STEP 1: Common data loading configuration
+            // <SnippetLoadData>
+            IDataView dataView = mlContext.Data.LoadFromTextFile<PhoneCallsData>(path: _dataPath, hasHeader: true, separatorChar: ',');
+            // </SnippetLoadData>
 
-    static void Main(string[] args)
-    {
-        MLContext mlContext = new MLContext();
+            // Detect seasonality for the series
+            // <SnippetCallDetectPeriod>
+            int period = DetectPeriod(mlContext, dataView);
+            // </SnippetCallDetectPeriod>
 
-        // 1. Import or create training data
-        HouseData[] houseData = {
-               new HouseData() { Size = 1.1F, Price = 1.2F },
-               new HouseData() { Size = 1.9F, Price = 2.3F },
-               new HouseData() { Size = 2.8F, Price = 3.0F },
-               new HouseData() { Size = 3.4F, Price = 3.7F } };
-        IDataView trainingData = mlContext.Data.LoadFromEnumerable(houseData);
+            // Detect anomaly for the series with period information
+            // <SnippetCallDetectAnomaly>
+            DetectAnomaly(mlContext, dataView, period);
+            // </SnippetCallDetectAnomaly>
+        }
+        
+        /// <summary>
+        /// 찾기
+        /// </summary>
+        /// <param name="mlContext"></param>
+        /// <param name="phoneCalls"></param>
+        /// <returns></returns>
+        static int DetectPeriod(MLContext mlContext, IDataView phoneCalls)
+        {
+            Console.WriteLine("Detect period of the series");
 
-        // 2. Specify data preparation and model training pipeline
-        var pipeline = mlContext.Transforms.Concatenate("Features", new[] { "Size" })
-            .Append(mlContext.Regression.Trainers.Sdca(labelColumnName: "Price", maximumNumberOfIterations: 100));
+            // STEP 2: Detect seasonality
+            // <SnippetDetectSeasonality>
+            int period = mlContext.AnomalyDetection.DetectSeasonality(phoneCalls, nameof(PhoneCallsData.value));
+            // </SnippetDetectSeasonality>
 
-        // 3. Train model
-        var model = pipeline.Fit(trainingData);
+            // <SnippetDisplayPeriod>
+            Console.WriteLine("Period of the series is: {0}.", period);
+            // </SnippetDisplayPeriod>
 
-        // 4. Make a prediction
-        var size = new HouseData() { Size = 2.5F };
-        var price = mlContext.Model.CreatePredictionEngine<HouseData, Prediction>(model).Predict(size);
+            return period;
+        }
 
-        Console.WriteLine($"Predicted price for size: {size.Size * 1000} sq ft= {price.Price * 100:C}k");
+        /// <summary>
+        /// 이상 감지
+        /// </summary>
+        /// <param name="mlContext"></param>
+        /// <param name="phoneCalls"></param>
+        /// <param name="period"></param>
+        static void DetectAnomaly(MLContext mlContext, IDataView phoneCalls, int period)
+        {
+            Console.WriteLine("Detect anomaly points in the series");
 
-        // Predicted price for size: 2500 sq ft= $261.98k
+            //STEP 2: Setup the parameters
+            // <SnippetSetupSrCnnParameters>
+            var options = new SrCnnEntireAnomalyDetectorOptions()
+            {
+                Threshold = 0.3,
+                Sensitivity = 64.0,
+                DetectMode = SrCnnDetectMode.AnomalyAndMargin,
+                Period = period,
+            };
+            // </SnippetSetupSrCnnParameters>
+
+            //STEP 3: Detect anomaly by SR-CNN algorithm
+            // <SnippetDetectAnomaly>
+            IDataView outputDataView =
+                mlContext
+                    .AnomalyDetection.DetectEntireAnomalyBySrCnn(
+                        phoneCalls,
+                        nameof(PhoneCallsPrediction.Prediction),
+                        nameof(PhoneCallsData.value),
+                        options);
+            // </SnippetDetectAnomaly>
+
+            // <SnippetCreateEnumerableForResult>
+            IEnumerable<PhoneCallsPrediction> predictions = mlContext.Data.CreateEnumerable<PhoneCallsPrediction>(
+                outputDataView, reuseRowObject: false);
+            // </SnippetCreateEnumerableForResult>
+
+            // <SnippetDisplayHeader>
+            Console.WriteLine("Index\tAnomaly\tExpectedValue\tUpperBoundary\tLowerBoundary");
+            // </SnippetDisplayHeader>
+
+            // <SnippetDisplayAnomalyDetectionResults>
+            var index = 0;
+
+            foreach (var p in predictions)
+            {
+                if (p.Prediction[0] == 1)
+                {
+                    Console.WriteLine("{0},{1},{2},{3},{4}  <-- alert is on, detected anomaly", index,
+                        p.Prediction[0], p.Prediction[3], p.Prediction[5], p.Prediction[6]);
+                }
+                else
+                {
+                    Console.WriteLine("{0},{1},{2},{3},{4}", index,
+                        p.Prediction[0], p.Prediction[3], p.Prediction[5], p.Prediction[6]);
+                }
+                ++index;
+
+            }
+
+            Console.WriteLine("");
+            // </SnippetDisplayAnomalyDetectionResults>
+        }
     }
 }
