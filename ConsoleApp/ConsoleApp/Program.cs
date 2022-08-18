@@ -1,126 +1,17 @@
-﻿// <SnippetAddUsings>
-using System;
-using System.IO;
-using Microsoft.ML;
-using Microsoft.ML.TimeSeries;
-using System.Collections;
-using System.Collections.Generic;
-// </SnippetAddUsings>
+﻿using System;
+using System.Threading;
 
-namespace PhoneCallsAnomalyDetection
+class Program
 {
-    class Program
+    static void Main(string[] args)
     {
-        // <SnippetDeclareGlobalVariables>
-        static readonly string _dataPath = Path.Combine(Environment.CurrentDirectory, "Data", "phone-calls.csv");
-        // </SnippetDeclareGlobalVariables>
-        static void Main(string[] args)
-        {
-            // Create MLContext to be shared across the model creation workflow objects
-            // <SnippetCreateMLContext>
-            MLContext mlContext = new MLContext();
-            // </SnippetCreateMLContext>
+        MyTimer.Start();
+        Thread.Sleep(1000 * 60 * 60 * 12)	// 12시간 딜레이
 
-            //STEP 1: Common data loading configuration
-            // <SnippetLoadData>
-            IDataView dataView = mlContext.Data.LoadFromTextFile<PhoneCallsData>(path: _dataPath, hasHeader: true, separatorChar: ',');
-            // </SnippetLoadData>
+        // OS 타이머의 현재 시간
+        Console.WriteLine(DateTime.Now);
 
-            // Detect seasonality for the series
-            // <SnippetCallDetectPeriod>
-            int period = DetectPeriod(mlContext, dataView);
-            // </SnippetCallDetectPeriod>
-
-            // Detect anomaly for the series with period information
-            // <SnippetCallDetectAnomaly>
-            DetectAnomaly(mlContext, dataView, period);
-            // </SnippetCallDetectAnomaly>
-        }
-        
-        /// <summary>
-        /// 찾기
-        /// </summary>
-        /// <param name="mlContext"></param>
-        /// <param name="phoneCalls"></param>
-        /// <returns></returns>
-        static int DetectPeriod(MLContext mlContext, IDataView phoneCalls)
-        {
-            Console.WriteLine("Detect period of the series");
-
-            // STEP 2: Detect seasonality
-            // <SnippetDetectSeasonality>
-            int period = mlContext.AnomalyDetection.DetectSeasonality(phoneCalls, nameof(PhoneCallsData.value));
-            // </SnippetDetectSeasonality>
-
-            // <SnippetDisplayPeriod>
-            Console.WriteLine("Period of the series is: {0}.", period);
-            // </SnippetDisplayPeriod>
-
-            return period;
-        }
-
-        /// <summary>
-        /// 이상 감지
-        /// </summary>
-        /// <param name="mlContext"></param>
-        /// <param name="phoneCalls"></param>
-        /// <param name="period"></param>
-        static void DetectAnomaly(MLContext mlContext, IDataView phoneCalls, int period)
-        {
-            Console.WriteLine("Detect anomaly points in the series");
-
-            //STEP 2: Setup the parameters
-            // <SnippetSetupSrCnnParameters>
-            var options = new SrCnnEntireAnomalyDetectorOptions()
-            {
-                Threshold = 0.3,
-                Sensitivity = 64.0,
-                DetectMode = SrCnnDetectMode.AnomalyAndMargin,
-                Period = period,
-            };
-            // </SnippetSetupSrCnnParameters>
-
-            //STEP 3: Detect anomaly by SR-CNN algorithm
-            // <SnippetDetectAnomaly>
-            IDataView outputDataView =
-                mlContext
-                    .AnomalyDetection.DetectEntireAnomalyBySrCnn(
-                        phoneCalls,
-                        nameof(PhoneCallsPrediction.Prediction),
-                        nameof(PhoneCallsData.value),
-                        options);
-            // </SnippetDetectAnomaly>
-
-            // <SnippetCreateEnumerableForResult>
-            IEnumerable<PhoneCallsPrediction> predictions = mlContext.Data.CreateEnumerable<PhoneCallsPrediction>(
-                outputDataView, reuseRowObject: false);
-            // </SnippetCreateEnumerableForResult>
-
-            // <SnippetDisplayHeader>
-            Console.WriteLine("Index\tAnomaly\tExpectedValue\tUpperBoundary\tLowerBoundary");
-            // </SnippetDisplayHeader>
-
-            // <SnippetDisplayAnomalyDetectionResults>
-            var index = 0;
-
-            foreach (var p in predictions)
-            {
-                if (p.Prediction[0] == 1)
-                {
-                    Console.WriteLine("{0},{1},{2},{3},{4}  <-- alert is on, detected anomaly", index,
-                        p.Prediction[0], p.Prediction[3], p.Prediction[5], p.Prediction[6]);
-                }
-                else
-                {
-                    Console.WriteLine("{0},{1},{2},{3},{4}", index,
-                        p.Prediction[0], p.Prediction[3], p.Prediction[5], p.Prediction[6]);
-                }
-                ++index;
-
-            }
-
-            Console.WriteLine("");
-            // </SnippetDisplayAnomalyDetectionResults>
-        }
+        // 직접 작성한 프로그램 타이머 현재 시간
+        Console.WriteLine(MyTimer.NowTime);
     }
 }
