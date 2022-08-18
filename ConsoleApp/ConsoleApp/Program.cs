@@ -6,7 +6,7 @@ class Program
     static void Main(string[] args)
     {
         MyTimer.Start();
-        Thread.Sleep(1000 * 60 * 60 * 12)	// 12시간 딜레이
+        Thread.Sleep(1000 * 60 * 60 * 12);	// 12시간 딜레이
 
         // OS 타이머의 현재 시간
         Console.WriteLine(DateTime.Now);
